@@ -6,6 +6,9 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
+# Install sharp for production image optimization
+RUN npm install sharp
+
 # Copy application code
 COPY . .
 
