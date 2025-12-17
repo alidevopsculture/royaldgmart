@@ -1,3 +1,5 @@
+name: Deploy to EC2
+
 on:
   push:
     branches: [ main ]
@@ -35,18 +37,28 @@ jobs:
         username: ubuntu
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
-          # Pull latest images
+          # Create .env file with secrets
+          cat > /home/ubuntu/.env << 'EOF'
+          MONGODB_URI=${{ secrets.MONGODB_URI }}
+          ACCESS_TOKEN_SECRET=${{ secrets.ACCESS_TOKEN_SECRET }}
+          REFRESH_TOKEN_SECRET=${{ secrets.REFRESH_TOKEN_SECRET }}
+          ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}
+          AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}
+          AWS_REGION=${{ secrets.AWS_REGION }}
+          NODE_ENV=${{ secrets.NODE_ENV }}
+          EMAIL_USER=${{ secrets.EMAIL_USER }}
+          EMAIL_PASS=${{ secrets.EMAIL_PASS }}
+          PORT=5000
+          EOF
+          
+          # Deploy containers
           docker pull ${{ secrets.DOCKER_USERNAME }}/rdgm-backend:latest
           docker pull ${{ secrets.DOCKER_USERNAME }}/rdgm-frontend:latest
           
-          # Stop and remove old containers
           docker stop backend frontend || true
           docker rm backend frontend || true
           
-          # Run new containers
-          docker network create prod-network || true
-          docker run --name backend --network prod-network -d ${{ secrets.DOCKER_USERNAME }}/rdgm-backend:latest
+          docker run --name backend --network prod-network -d --env-file /home/ubuntu/.env ${{ secrets.DOCKER_USERNAME }}/rdgm-backend:latest
           docker run --name frontend --network prod-network -d ${{ secrets.DOCKER_USERNAME }}/rdgm-frontend:latest
-          
-          # Clean up old images
-          docker image prune -f
