@@ -53,7 +53,7 @@ const corsOptions = {
                 'http://www.royaldgmart.com', 
                 'http://royaldgmart.com',
 		'http://localhost:3000',
-		'http://13.203.105.186:3000'
+		'http://3.110.43.42:3000'
             ];
             if (allowedOrigins.includes(origin)) {
                 return callback(null, true);
