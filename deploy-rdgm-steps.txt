@@ -1,0 +1,885 @@
+# 🚀 RDGM E-commerce Application - PM2 Deployment Guide
+
+## 📋 Prerequisites
+- Ubuntu Server (18.04+)
+- Node.js (v16+ recommended)
+- PM2 Process Manager
+- Domain name (optional for production)
+- MongoDB Atlas account
+- AWS S3 bucket for image storage
+
+## 🔧 Step 1: Server Setup
+
+### Install Node.js
+```bash
+# Update system
+sudo apt update
+sudo apt upgrade -y
+
+# Install Node.js 18.x
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# Verify installation
+node --version
+npm --version
+```
+
+### Install PM2
+```bash
+# Install PM2 globally
+sudo npm install -g pm2
+
+# Verify installation
+pm2 --version
+
+# Setup PM2 to start on system boot
+pm2 startup
+# Run the command that PM2 outputs
+```
+
+### Clone Repository
+```bash
+# Navigate to home directory
+cd ~
+
+# Clone repository
+git clone <your-repository-url>
+cd rdgm-version-3
+```
+
+## 🗄️ Step 2: Database Configuration
+
+### MongoDB Atlas Setup
+1. Create MongoDB Atlas account at https://www.mongodb.com/cloud/atlas
+2. Create new cluster (Free tier available)
+3. Create database user with password
+4. Get connection string
+5. Whitelist server IP address (or use 0.0.0.0/0 for testing)
+
+### Backend Environment Variables
+```bash
+cd ~/rdgm-version-3/backend
+nano .env
+```
+
+Add the following:
+```
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/royaldigitalmart?retryWrites=true&w=majority
+ACCESS_TOKEN_SECRET=your_strong_secret_key_here_min_32_chars
+REFRESH_TOKEN_SECRET=another_strong_secret_key_here_min_32_chars
+ADMIN_EMAIL=royaldigitalmart@gmail.com
+ADMIN_PASSWORD=admin123
+AWS_ACCESS_KEY_ID=your_aws_access_key
+AWS_SECRET_ACCESS_KEY=your_aws_secret_key
+AWS_S3_BUCKET_NAME=your-bucket-name
+S3_BUCKET_NAME=your-bucket-name
+AWS_REGION=ap-south-1
+PORT=5000
+NODE_ENV=production
+```
+
+Save and exit (Ctrl+X, then Y, then Enter)
+
+## 🌐 Step 3: Frontend Configuration
+
+### Frontend Environment Variables
+```bash
+cd ~/rdgm-version-3/frontend
+nano .env.production
+```
+
+Add:
+```
+NEXT_PUBLIC_API_URL=http://localhost:5000
+```
+
+For production with domain:
+```
+NEXT_PUBLIC_API_URL=https://your-domain.com
+```
+
+Save and exit (Ctrl+X, then Y, then Enter)
+
+## 📦 Step 4: Install Dependencies
+
+### Install Backend Dependencies
+```bash
+cd ~/rdgm-version-3/backend
+npm install
+```
+
+### Install Frontend Dependencies
+```bash
+cd ~/rdgm-version-3/frontend
+npm install
+```
+
+### Build Frontend for Production
+```bash
+cd ~/rdgm-version-3/frontend
+npm run build
+```
+
+## 🚀 Step 5: PM2 Configuration
+
+### Create PM2 Ecosystem File
+```bash
+cd ~/rdgm-version-3
+nano ecosystem.config.js
+```
+
+Add the following:
+```javascript
+module.exports = {
+  apps: [
+    {
+      name: 'rdgm-backend',
+      cwd: './backend',
+      script: 'server.js',
+      instances: 1,
+      exec_mode: 'fork',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 5000
+      },
+      error_file: './logs/backend-error.log',
+      out_file: './logs/backend-out.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      merge_logs: true,
+      autorestart: true,
+      max_memory_restart: '1G',
+      watch: false
+    },
+    {
+      name: 'rdgm-frontend',
+      cwd: './frontend',
+      script: 'npm',
+      args: 'start',
+      instances: 1,
+      exec_mode: 'fork',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3000
+      },
+      error_file: './logs/frontend-error.log',
+      out_file: './logs/frontend-out.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      merge_logs: true,
+      autorestart: true,
+      max_memory_restart: '512M',
+      watch: false
+    }
+  ]
+};
+```
+
+Save and exit (Ctrl+X, then Y, then Enter)
+
+### Create Logs Directory
+```bash
+cd ~/rdgm-version-3
+mkdir -p backend/logs frontend/logs
+```
+
+## 👤 Step 6: Create Admin User
+
+### Test Database Connection
+```bash
+cd ~/rdgm-version-3/backend
+node test-connection.js
+```
+
+### Create Admin User
+```bash
+cd ~/rdgm-version-3/backend
+node create-admin.js
+```
+
+You should see: "✅ Admin user created successfully"
+
+## 🎯 Step 7: Start Application with PM2
+
+### Start All Services
+```bash
+cd ~/rdgm-version-3
+pm2 start ecosystem.config.js
+```
+
+### Check Application Status
+```bash
+pm2 status
+pm2 list
+```
+
+You should see both `rdgm-backend` and `rdgm-frontend` running.
+
+### View Logs
+```bash
+# View all logs
+pm2 logs
+
+# View backend logs only
+pm2 logs rdgm-backend
+
+# View frontend logs only
+pm2 logs rdgm-frontend
+
+# View last 100 lines
+pm2 logs --lines 100
+```
+
+### Save PM2 Configuration
+```bash
+# Save current PM2 process list
+pm2 save
+
+# This ensures apps restart after server reboot
+```
+
+## 🔄 Step 8: Deployment After Code Update
+
+### When Fresh Code is Pulled from Repository
+
+**Complete Deployment Process:**
+
+```bash
+# Step 1: Navigate to project directory
+cd ~/rdgm-version-3
+
+# Step 2: Pull latest code
+git pull origin main
+# or: git pull origin master
+
+# Step 3: Update Backend
+cd ~/rdgm-version-3/backend
+npm install  # Install any new dependencies
+pm2 restart rdgm-backend
+
+# Step 4: Update Frontend
+cd ~/rdgm-version-3/frontend
+npm install  # Install any new dependencies
+npm run build  # Rebuild for production
+pm2 restart rdgm-frontend
+
+# Step 5: Verify deployment
+pm2 status
+pm2 logs --lines 50
+```
+
+### Quick Restart (No Code Changes)
+```bash
+cd ~/rdgm-version-3
+pm2 restart all
+```
+
+### Restart Individual Service
+```bash
+# Restart backend only
+pm2 restart rdgm-backend
+
+# Restart frontend only
+pm2 restart rdgm-frontend
+```
+
+### Zero-Downtime Reload
+```bash
+# Reload without downtime
+pm2 reload rdgm-backend
+pm2 reload rdgm-frontend
+```
+
+## 🌍 Step 9: Nginx Setup (Production)
+
+### Install Nginx
+```bash
+sudo apt install nginx -y
+```
+
+### Configure Nginx
+```bash
+sudo nano /etc/nginx/sites-available/rdgm
+```
+
+Add:
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com www.your-domain.com;
+
+    # Frontend
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Backend API
+    location /api {
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+### Enable Site
+```bash
+# Create symbolic link
+sudo ln -s /etc/nginx/sites-available/rdgm /etc/nginx/sites-enabled/
+
+# Test configuration
+sudo nginx -t
+
+# Restart Nginx
+sudo systemctl restart nginx
+sudo systemctl enable nginx
+```
+
+### Install SSL Certificate (Let's Encrypt)
+```bash
+# Install Certbot
+sudo apt install certbot python3-certbot-nginx -y
+
+# Get SSL certificate
+sudo certbot --nginx -d your-domain.com -d www.your-domain.com
+
+# Auto-renewal is configured automatically
+# Test renewal
+sudo certbot renew --dry-run
+```
+
+## 🔐 Step 10: Firewall Configuration
+
+### Setup UFW Firewall
+```bash
+# Enable firewall
+sudo ufw enable
+
+# Allow SSH
+sudo ufw allow 22/tcp
+
+# Allow HTTP and HTTPS
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+
+# Check status
+sudo ufw status
+```
+
+## 📊 Step 11: PM2 Monitoring Commands
+
+### Basic Monitoring
+```bash
+# View process status
+pm2 status
+
+# View detailed info
+pm2 show rdgm-backend
+pm2 show rdgm-frontend
+
+# Monitor CPU and Memory
+pm2 monit
+
+# View logs in real-time
+pm2 logs
+
+# View logs with timestamp
+pm2 logs --timestamp
+```
+
+### Advanced Monitoring
+```bash
+# View process metrics
+pm2 describe rdgm-backend
+
+# Check memory usage
+pm2 list | grep memory
+
+# Flush logs
+pm2 flush
+
+# Reload logs
+pm2 reloadLogs
+```
+
+## 🔧 Step 12: Maintenance Commands
+
+### PM2 Process Management
+```bash
+# Stop all processes
+pm2 stop all
+
+# Stop specific process
+pm2 stop rdgm-backend
+pm2 stop rdgm-frontend
+
+# Restart all processes
+pm2 restart all
+
+# Delete process from PM2
+pm2 delete rdgm-backend
+pm2 delete rdgm-frontend
+
+# Delete all processes
+pm2 delete all
+
+# Start processes again
+pm2 start ecosystem.config.js
+pm2 save
+```
+
+### Update Application
+```bash
+# Complete update process
+cd ~/rdgm-version-3
+git pull origin main
+cd backend && npm install
+cd ../frontend && npm install && npm run build
+pm2 restart all
+pm2 logs --lines 50
+```
+
+### Database Operations
+```bash
+cd ~/rdgm-version-3/backend
+
+# Reset admin password
+node reset-admin-password.js
+
+# Create new admin
+node create-admin.js
+
+# Test MongoDB connection
+node test-connection.js
+```
+
+### Clear Logs
+```bash
+# Clear PM2 logs
+pm2 flush
+
+# Clear old log files
+cd ~/rdgm-version-3
+rm -f backend/logs/*.log
+rm -f frontend/logs/*.log
+```
+
+## ❌ Common Errors & Solutions
+
+### 1. PM2 Process Not Starting
+
+**Error**: Process shows "errored" or "stopped" status
+
+**Solution**:
+```bash
+# Check logs for errors
+pm2 logs rdgm-backend --lines 100
+pm2 logs rdgm-frontend --lines 100
+
+# Delete and restart
+pm2 delete rdgm-backend
+pm2 delete rdgm-frontend
+cd ~/rdgm-version-3
+pm2 start ecosystem.config.js
+pm2 save
+```
+
+### 2. Port Already in Use
+
+**Error**: "Port 3000/5000 already in use"
+
+**Solution**:
+```bash
+# Find process using port
+sudo lsof -i :3000
+sudo lsof -i :5000
+
+# Kill process
+sudo kill -9 <PID>
+
+# Or stop PM2 and restart
+pm2 stop all
+pm2 start ecosystem.config.js
+```
+
+### 3. MongoDB Connection Failed
+
+**Error**: "MongoServerError: Authentication failed"
+
+**Solution**:
+```bash
+# Check environment variables
+cd ~/rdgm-version-3/backend
+cat .env | grep MONGODB_URI
+
+# Test connection
+node test-connection.js
+
+# Verify MongoDB Atlas:
+# - Check username/password
+# - Check IP whitelist (add 0.0.0.0/0 for testing)
+# - Check database name in connection string
+```
+
+### 4. Frontend Build Fails
+
+**Error**: "npm run build" fails
+
+**Solution**:
+```bash
+cd ~/rdgm-version-3/frontend
+
+# Clear cache and rebuild
+rm -rf .next node_modules package-lock.json
+npm install
+npm run build
+
+# If still fails, check Node version
+node --version  # Should be 16+
+```
+
+### 5. AWS S3 Upload Issues
+
+**Error**: Images not uploading to S3
+
+**Solution**:
+```bash
+# Check AWS credentials
+cd ~/rdgm-version-3/backend
+cat .env | grep AWS
+
+# Test AWS CLI (install if needed)
+sudo apt install awscli -y
+aws configure
+aws s3 ls s3://your-bucket-name --region ap-south-1
+
+# Verify S3 bucket:
+# - Bucket exists
+# - Correct region
+# - IAM user has S3 permissions
+# - CORS configured properly
+```
+
+### 6. Nginx 502 Bad Gateway
+
+**Error**: Nginx shows 502 error
+
+**Solution**:
+```bash
+# Check if PM2 processes are running
+pm2 status
+
+# Check if ports are accessible
+curl http://localhost:3000
+curl http://localhost:5000
+
+# Restart services
+pm2 restart all
+sudo systemctl restart nginx
+
+# Check Nginx logs
+sudo tail -f /var/log/nginx/error.log
+```
+
+### 7. Memory Issues
+
+**Error**: Process crashes due to memory
+
+**Solution**:
+```bash
+# Check memory usage
+pm2 monit
+free -h
+
+# Increase memory limit in ecosystem.config.js
+# Edit max_memory_restart value
+nano ~/rdgm-version-3/ecosystem.config.js
+
+# Restart with new config
+pm2 delete all
+pm2 start ecosystem.config.js
+pm2 save
+```
+
+### 8. PM2 Not Starting on Boot
+
+**Error**: Processes don't start after server reboot
+
+**Solution**:
+```bash
+# Setup PM2 startup script
+pm2 startup
+
+# Run the command that PM2 outputs (starts with sudo)
+
+# Save current process list
+pm2 save
+
+# Test by rebooting
+sudo reboot
+
+# After reboot, check status
+pm2 status
+```
+
+### 9. Login Issues - Password Not Working
+
+**Error**: Admin login fails
+
+**Solution**:
+```bash
+cd ~/rdgm-version-3/backend
+
+# Reset admin password
+node reset-admin-password.js
+
+# Or create fresh admin
+node -e "
+const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
+require('dotenv').config();
+
+async function createAdmin() {
+  await mongoose.connect(process.env.MONGODB_URI);
+  const User = mongoose.model('User', new mongoose.Schema({
+    username: String, email: String, password: String, role: String
+  }));
+  
+  await User.deleteOne({ email: 'royaldigitalmart@gmail.com' });
+  const hashedPassword = await bcrypt.hash('admin123', 10);
+  
+  await new User({
+    username: 'admin',
+    email: 'royaldigitalmart@gmail.com',
+    password: hashedPassword,
+    role: 'admin'
+  }).save();
+  
+  console.log('✅ Admin created');
+  process.exit(0);
+}
+createAdmin();
+"
+
+# Restart backend
+pm2 restart rdgm-backend
+```
+
+### 10. Git Pull Conflicts
+
+**Error**: "error: Your local changes would be overwritten"
+
+**Solution**:
+```bash
+cd ~/rdgm-version-3
+
+# Stash local changes
+git stash
+
+# Pull latest code
+git pull origin main
+
+# If you need your changes back
+git stash pop
+
+# Or discard local changes completely
+git reset --hard HEAD
+git pull origin main
+```
+
+## 🔍 Debugging Commands
+
+### Check Application Health
+```bash
+# Test backend API
+curl http://localhost:5000/api/health
+curl http://localhost:5000/api/products
+
+# Test frontend
+curl http://localhost:3000
+
+# Check with domain
+curl https://your-domain.com
+```
+
+### View System Resources
+```bash
+# Check disk space
+df -h
+
+# Check memory
+free -h
+
+# Check CPU
+top
+# Press 'q' to exit
+
+# Check running processes
+ps aux | grep node
+```
+
+### Network Debugging
+```bash
+# Check open ports
+sudo netstat -tulpn | grep LISTEN
+
+# Check if ports are accessible
+telnet localhost 3000
+telnet localhost 5000
+
+# Check firewall status
+sudo ufw status
+```
+
+### Log Analysis
+```bash
+# View PM2 logs
+pm2 logs --lines 200
+
+# Search for errors in logs
+pm2 logs | grep -i error
+pm2 logs | grep -i "failed"
+
+# View Nginx logs
+sudo tail -f /var/log/nginx/access.log
+sudo tail -f /var/log/nginx/error.log
+
+# View system logs
+sudo journalctl -u nginx -f
+```
+
+## 📝 Production Checklist
+
+- [ ] Node.js and PM2 installed
+- [ ] Repository cloned
+- [ ] Backend .env configured
+- [ ] Frontend .env.production configured
+- [ ] Dependencies installed (backend & frontend)
+- [ ] Frontend built for production
+- [ ] MongoDB Atlas connection working
+- [ ] AWS S3 bucket configured
+- [ ] Admin user created and tested
+- [ ] PM2 ecosystem.config.js created
+- [ ] Applications started with PM2
+- [ ] PM2 startup configured
+- [ ] PM2 process list saved
+- [ ] Nginx installed and configured
+- [ ] SSL certificate installed (production)
+- [ ] Firewall configured
+- [ ] Application accessible via domain
+- [ ] Logs monitoring setup
+
+## 🆘 Emergency Recovery
+
+### Complete System Reset
+```bash
+# Stop all PM2 processes
+pm2 stop all
+pm2 delete all
+
+# Remove application
+cd ~
+rm -rf rdgm-version-3
+
+# Fresh installation
+git clone <your-repository-url>
+cd rdgm-version-3
+
+# Backend setup
+cd backend
+npm install
+nano .env  # Add environment variables
+
+# Frontend setup
+cd ../frontend
+npm install
+npm run build
+
+# Create admin
+cd ../backend
+node create-admin.js
+
+# Start with PM2
+cd ..
+pm2 start ecosystem.config.js
+pm2 save
+```
+
+### Backup Important Data
+```bash
+# Backup environment files
+cd ~/rdgm-version-3
+cp backend/.env ~/backup-env-backend
+cp frontend/.env.production ~/backup-env-frontend
+
+# Backup PM2 configuration
+cp ecosystem.config.js ~/backup-ecosystem.config.js
+
+# Export MongoDB data (if needed)
+cd backend
+node -e "
+const mongoose = require('mongoose');
+require('dotenv').config();
+mongoose.connect(process.env.MONGODB_URI).then(() => {
+  console.log('Connected to MongoDB');
+  console.log('Use mongodump for backup');
+  process.exit(0);
+});
+"
+```
+
+## 🚀 Quick Reference Commands
+
+### Daily Operations
+```bash
+# Check status
+pm2 status
+
+# View logs
+pm2 logs --lines 50
+
+# Restart all
+pm2 restart all
+
+# Monitor resources
+pm2 monit
+```
+
+### After Code Update
+```bash
+cd ~/rdgm-version-3
+git pull origin main
+cd backend && npm install && pm2 restart rdgm-backend
+cd ../frontend && npm install && npm run build && pm2 restart rdgm-frontend
+pm2 logs --lines 50
+```
+
+### Troubleshooting
+```bash
+# Check if running
+pm2 status
+curl http://localhost:3000
+curl http://localhost:5000
+
+# View errors
+pm2 logs --err --lines 100
+
+# Restart everything
+pm2 restart all
+sudo systemctl restart nginx
+```
+
+---
+**Last Updated**: December 2025
+**Version**: 4.0 (PM2 Edition)
+**Support**: Check logs first with `pm2 logs`, then refer to troubleshooting guide
