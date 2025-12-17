@@ -1,0 +1,52 @@
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+    
+    - name: Build and push backend
+      run: |
+        cd backend
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/rdgm-backend:latest .
+        docker push ${{ secrets.DOCKER_USERNAME }}/rdgm-backend:latest
+    
+    - name: Build and push frontend
+      run: |
+        cd frontend
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/rdgm-frontend:latest .
+        docker push ${{ secrets.DOCKER_USERNAME }}/rdgm-frontend:latest
+    
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          # Pull latest images
+          docker pull ${{ secrets.DOCKER_USERNAME }}/rdgm-backend:latest
+          docker pull ${{ secrets.DOCKER_USERNAME }}/rdgm-frontend:latest
+          
+          # Stop and remove old containers
+          docker stop backend frontend || true
+          docker rm backend frontend || true
+          
+          # Run new containers
+          docker network create prod-network || true
+          docker run --name backend --network prod-network -d ${{ secrets.DOCKER_USERNAME }}/rdgm-backend:latest
+          docker run --name frontend --network prod-network -d ${{ secrets.DOCKER_USERNAME }}/rdgm-frontend:latest
+          
+          # Clean up old images
+          docker image prune -f

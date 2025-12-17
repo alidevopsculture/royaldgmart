@@ -13,8 +13,8 @@ COPY . .
 RUN npm run build
 
 # Set production environment
-ENV NODE_ENV=development
+ENV NODE_ENV=production
 
 EXPOSE 3000
 
-CMD ["npm", "run","dev"]
+CMD ["npm", "start"]
