@@ -480,7 +480,7 @@ export default async function Homepage({ user }: { user: any }) {
             <div className="lg:col-span-1">
               <div className="flex items-center gap-3 mb-6">
                 <HomeIcon className="h-8 w-8 text-white" />
-                <span className="font-light text-2xl tracking-wide">RoyalStore</span>
+                <span className="font-light text-2xl tracking-wide">RoyaldgMart</span>
               </div>
               <p className="text-gray-300 font-light leading-relaxed mb-8">
                 Curating timeless elegance and contemporary style for the modern wardrobe.
@@ -555,7 +555,7 @@ export default async function Homepage({ user }: { user: any }) {
                 </div>
               </div>
               <p className="text-gray-400 font-light text-sm">
-                © 2024 RoyalStore. All rights reserved.
+                © 2025 RoyalStore. All rights reserved.
               </p>
             </div>
           </div>
