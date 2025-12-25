@@ -10,10 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout-code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       # 1) Secret scanning / token scan (example: Gitleaks)
     - name: Run Gitleaks secret scan
-      uses: zricethezav/gitleaks-action@v2
+      uses: zricethezav/gitleaks-action@v3
       with:
         args: detect --source=. --no-git  # Scans current dir, skips git history
 
