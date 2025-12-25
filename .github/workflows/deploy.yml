@@ -5,9 +5,27 @@ on:
     branches: [ main ]
 
 jobs:
+
+  security-check:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout-code
+      uses: actions/checkout@v3
+      # 1) Secret scanning / token scan (example: Gitleaks)
+    - name: Run Gitleaks secret scan
+      uses: zricethezav/gitleaks-action@v2
+      with:
+        args: detect --source=. --no-git  # Scans current dir, skips git history
+
+    - name: Backend vulnerability scan  # Added npm audit
+      run: |
+        cd backend
+        npm ci
+        npm audit --audit-level=high
+
   build-and-deploy:
     runs-on: ubuntu-latest
-    
+    needs: security-check
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
