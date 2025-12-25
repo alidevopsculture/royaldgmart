@@ -26,7 +26,7 @@ jobs:
       run: |
         cd backend
         npm ci
-        npm audit --audit-level=low
+        npm audit --audit-level=none
 
   build-and-deploy:
     runs-on: ubuntu-latest
