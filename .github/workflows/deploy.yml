@@ -12,10 +12,15 @@ jobs:
     - name: Checkout-code
       uses: actions/checkout@v4
       # 1) Secret scanning / token scan (example: Gitleaks)
-    - name: Run Gitleaks secret scan
-      uses: zricethezav/gitleaks-action@v3
+    - name: Security scan with Trivy
+      uses: aquasecurity/trivy-action@master
       with:
-        args: detect --source=. --no-git  # Scans current dir, skips git history
+        scan-type: 'fs'      # Scan filesystem (your code)
+        scan-ref: '.'        # Current directory
+        format: 'sarif'      # GitHub SARIF support
+        output: 'trivy-results.sarif'
+        severity: 'CRITICAL,HIGH'
+        exit-code: '1'  
 
     - name: Backend vulnerability scan  # Added npm audit
       run: |
