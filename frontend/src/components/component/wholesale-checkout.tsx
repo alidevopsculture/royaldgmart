@@ -57,7 +57,7 @@ export default function WholesaleCheckout() {
         const profileResult = await getUserProfile();
         
         let fullUserData = userData;
-        if (profileResult.success && profileResult.user) {
+        if (profileResult && profileResult.success && profileResult.user) {
           fullUserData = profileResult.user;
         }
         
