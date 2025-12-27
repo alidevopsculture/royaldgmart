@@ -1,9 +1,15 @@
 // Client-side payment functions
 export async function createRazorpayOrderClient(amount: number) {
   try {
+    // Get token from cookie
+    const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
+    
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/payments/create-order`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      },
       credentials: 'include',
       body: JSON.stringify({ amount }),
     });
@@ -31,9 +37,15 @@ export async function verifyRazorpayPaymentClient(paymentData: any, orderId: str
       throw new Error('Payment data is required');
     }
     
+    // Get token from cookie
+    const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
+    
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/payments/verify-payment`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      },
       credentials: 'include',
       body: JSON.stringify({ ...paymentData, orderId }),
     });
