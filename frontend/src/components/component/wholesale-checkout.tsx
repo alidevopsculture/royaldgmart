@@ -78,12 +78,29 @@ export default function WholesaleCheckout() {
         const cartIdentifier = await getCartIdentifier(userData);
         const cartData = await getAllCarts(cartIdentifier);
         
+        console.log('Cart data received:', cartData);
+        
+        // Check if cartData exists and has products
+        if (!cartData || !cartData.products || cartData.products.length === 0) {
+          console.log('No cart data or empty cart, redirecting...');
+          toast.error('Your wholesale cart is empty');
+          router.push('/wholesale-cart');
+          return;
+        }
+        
         // Filter only wholesale products
-        const wholesaleProducts = cartData.products?.filter((item: any) => 
-          item.product && item.product.category === 'WHOLESALE'
-        ) || [];
+        const wholesaleProducts = cartData.products.filter((item: any) => {
+          if (!item || !item.product) {
+            console.log('Skipping invalid item:', item);
+            return false;
+          }
+          return item.product.category === 'WHOLESALE';
+        });
+        
+        console.log('Wholesale products found:', wholesaleProducts.length);
         
         if (wholesaleProducts.length === 0) {
+          console.log('No wholesale products in cart, redirecting...');
           toast.error('Your wholesale cart is empty');
           router.push('/wholesale-cart');
           return;
@@ -256,6 +273,30 @@ export default function WholesaleCheckout() {
     return discountedSubtotal + shipping + tax;
   };
 
+  // Use cart calculations if available, otherwise calculate manually
+  const getCalculations = () => {
+    if (cart?.calculations) {
+      return {
+        subtotal: cart.calculations.subtotal,
+        discount: cart.calculations.discount,
+        discountedSubtotal: cart.calculations.subtotal - cart.calculations.discount,
+        shipping: 100, // Fixed shipping for wholesale
+        tax: cart.calculations.tax,
+        total: cart.calculations.total + 100 // Add shipping to cart total
+      };
+    }
+    
+    // Fallback calculations
+    const subtotal = calculateSubtotal();
+    const discount = calculateDiscount(subtotal);
+    const discountedSubtotal = subtotal - discount;
+    const shipping = calculateShipping();
+    const tax = calculateTax(discountedSubtotal);
+    const total = discountedSubtotal + shipping + tax;
+    
+    return { subtotal, discount, discountedSubtotal, shipping, tax, total };
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 flex items-center justify-center">
@@ -267,12 +308,8 @@ export default function WholesaleCheckout() {
     );
   }
 
-  const subtotal = calculateSubtotal();
-  const discount = calculateDiscount(subtotal);
-  const discountedSubtotal = subtotal - discount;
-  const shipping = calculateShipping();
-  const tax = calculateTax(discountedSubtotal);
-  const total = calculateTotal();
+  const calculations = getCalculations();
+  const { subtotal, discount, discountedSubtotal, shipping, tax, total } = calculations;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 py-8">
@@ -605,7 +642,7 @@ export default function WholesaleCheckout() {
                     <span>₹{subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-green-600">
-                    <span>Wholesale Discount ({wholesaleSettings?.wholesaleDiscount || 10}%)</span>
+                    <span>Wholesale Discount ({cart?.calculations?.discountPercentage || wholesaleSettings?.wholesaleDiscount || 10}%)</span>
                     <span>-₹{discount.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
@@ -617,7 +654,7 @@ export default function WholesaleCheckout() {
                     <span>₹{shipping.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>GST ({wholesaleSettings?.taxRate || 18}%)</span>
+                    <span>GST ({cart?.calculations?.taxPercentage || wholesaleSettings?.taxRate || 18}%)</span>
                     <span>₹{tax.toFixed(2)}</span>
                   </div>
                   <Separator />

@@ -68,19 +68,6 @@ export default function Checkout() {
       try {
         setLoading(true);
         
-        // Test API connection
-        try {
-          const testResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/test-auth`, {
-            credentials: 'include'
-          });
-          if (testResponse) {
-            console.log('API connection test:', testResponse.status);
-          }
-        } catch (error) {
-          console.error('API connection failed:', error);
-          toast.error('Cannot connect to server. Please check if the backend is running.');
-        }
-        
         const userData = await getUserData();
         
         if (!userData) {
@@ -93,7 +80,7 @@ export default function Checkout() {
         const profileResult = await getUserProfile();
         
         let fullUserData = userData;
-        if (profileResult.success && profileResult.user) {
+        if (profileResult && profileResult.success && profileResult.user) {
           fullUserData = profileResult.user;
         }
         
@@ -122,23 +109,59 @@ export default function Checkout() {
         }
         
         const cartIdentifier = await getCartIdentifier(userData);
+        
+        // Add a small delay to ensure cart is updated after Buy Now
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         const cartData = await getAllCarts(cartIdentifier);
         
+        console.log('Cart data received:', cartData);
+        
+        // Check if cartData exists and has products
+        if (!cartData || !cartData.products || cartData.products.length === 0) {
+          console.log('No cart data or empty cart, redirecting...');
+          toast.error('Your cart is empty');
+          router.push('/cart');
+          return;
+        }
+        
         // Filter out wholesale products for regular checkout
-        const regularProducts = cartData.products?.filter((item: any) => 
-          item.product && item.product.category !== 'WHOLESALE'
-        ) || [];
+        const regularProducts = cartData.products.filter((item: any) => {
+          if (!item || !item.product) {
+            console.log('Skipping invalid item:', item);
+            return false;
+          }
+          return item.product.category !== 'WHOLESALE';
+        });
+        
+        console.log('Regular products found:', regularProducts.length);
         
         if (regularProducts.length === 0) {
+          console.log('No regular products in cart, redirecting...');
           toast.error('Your cart is empty');
           router.push('/cart');
           return;
         }
         
         setCart({ ...cartData, products: regularProducts });
+        
+        // Test API connection after cart is validated
+        try {
+          const testResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/test-auth`, {
+            credentials: 'include'
+          });
+          if (testResponse) {
+            console.log('API connection test:', testResponse.status);
+          }
+        } catch (error) {
+          console.error('API connection failed:', error);
+          toast.error('Cannot connect to server. Please check if the backend is running.');
+        }
+        
       } catch (err: any) {
         console.error('Error initializing checkout:', err);
         toast.error('Failed to load checkout');
+        router.push('/cart');
       } finally {
         setLoading(false);
       }
@@ -347,8 +370,19 @@ export default function Checkout() {
   };
 
   const calculateSubtotal = () => {
-    if (!cart) return 0;
-    return cart.products.reduce((total, item) => total + item.totalPrice, 0);
+    if (!cart || !cart.products || cart.products.length === 0) {
+      console.log('No cart or products for subtotal calculation');
+      return 0;
+    }
+    const subtotal = cart.products.reduce((total, item) => {
+      if (!item.product) {
+        console.log('Skipping item without product:', item);
+        return total;
+      }
+      return total + (item.totalPrice || 0);
+    }, 0);
+    console.log('Calculated subtotal:', subtotal);
+    return subtotal;
   };
 
   const calculateShipping = () => 50; // Fixed shipping cost
