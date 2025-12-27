@@ -60,12 +60,15 @@ const wholesaleOrderSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['cod', 'card', 'upi'],
+    enum: ['cod', 'card', 'upi', 'razorpay'],
     default: 'cod'
   },
   paymentScreenshot: {
     type: String // filename of uploaded payment screenshot
   },
+  razorpayOrderId: { type: String },
+  razorpayPaymentId: { type: String },
+  razorpaySignature: { type: String },
   paymentStatus: {
     type: String,
     enum: ['pending', 'completed', 'failed'],

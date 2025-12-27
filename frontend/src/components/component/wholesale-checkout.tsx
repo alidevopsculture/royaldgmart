@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { ShoppingBag, User, CreditCard, MapPin, Phone, Mail, Truck, Banknote } from 'lucide-react';
 import { getUserData } from '@/actions/auth';
 import { getAllCarts } from '@/actions/cart';
+import { createRazorpayOrderClient, verifyRazorpayPaymentClient } from '@/actions/payment-client';
 import { getCartIdentifier, hasCartItems } from '@/lib/cart-utils';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
@@ -125,7 +126,71 @@ export default function WholesaleCheckout() {
     }
   };
 
+  const handleRazorpayPayment = async () => {
+    try {
+      setOrderLoading(true);
+      
+      // First create the wholesale order in your database
+      const { createWholesaleOrderClient } = await import('@/actions/wholesale-orders-client');
+      const orderResult = await createWholesaleOrderClient(formData, 'razorpay', null);
+      
+      if (!orderResult || !orderResult.orderId) {
+        throw new Error('Failed to create wholesale order');
+      }
+
+      // Create Razorpay order
+      const razorpayOrder = await createRazorpayOrderClient(total);
+      
+      const options = {
+        key: razorpayOrder.key,
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
+        name: 'Royal Digital Mart - Wholesale',
+        description: 'Wholesale Order Payment',
+        order_id: razorpayOrder.orderId,
+        handler: async function (response: any) {
+          try {
+            // Verify payment
+            await verifyRazorpayPaymentClient(response, orderResult.orderId);
+            toast.success('Wholesale payment successful!');
+            router.push(`/wholesale-order-confirmation?orderId=${orderResult.orderId}&total=${total.toFixed(2)}`);
+          } catch (error: any) {
+            toast.error(error.message || 'Payment verification failed');
+          }
+        },
+        prefill: {
+          name: `${formData.firstName} ${formData.lastName}`,
+          email: formData.email,
+          contact: formData.phone,
+        },
+        theme: {
+          color: '#f59e0b',
+        },
+      };
+
+      const razorpay = new (window as any).Razorpay(options);
+      razorpay.open();
+      
+    } catch (error: any) {
+      console.error('Razorpay wholesale payment error:', error);
+      toast.error(error.message || 'Payment failed');
+    } finally {
+      setOrderLoading(false);
+    }
+  };
+
   const handlePlaceOrder = async () => {
+    // If Razorpay payment, handle it separately
+    if (paymentMethod === 'razorpay') {
+      // Validate required fields first
+      if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.address || !formData.city || !formData.zipCode) {
+        toast.error('Please fill all required fields');
+        return;
+      }
+      
+      await handleRazorpayPayment();
+      return;
+    }
     // If UPI payment and not showing details yet, show UPI payment details
     if (paymentMethod === 'upi' && !showUpiDetails) {
       setShowUpiDetails(true);
@@ -351,16 +416,16 @@ export default function WholesaleCheckout() {
                   <div className="flex items-center space-x-2">
                     <input
                       type="radio"
-                      id="card"
+                      id="razorpay"
                       name="payment"
-                      value="card"
-                      checked={paymentMethod === 'card'}
+                      value="razorpay"
+                      checked={paymentMethod === 'razorpay'}
                       onChange={(e) => setPaymentMethod(e.target.value)}
                       className="w-4 h-4 text-amber-600"
                     />
-                    <label htmlFor="card" className="flex items-center gap-2 cursor-pointer">
+                    <label htmlFor="razorpay" className="flex items-center gap-2 cursor-pointer">
                       <CreditCard className="h-4 w-4" />
-                      Credit/Debit Card
+                      Razorpay (Cards, UPI, Wallets)
                     </label>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -577,6 +642,8 @@ export default function WholesaleCheckout() {
                     `Proceed to UPI Payment - ₹${total.toFixed(2)}`
                   ) : paymentMethod === 'upi' && showUpiDetails ? (
                     `Complete Wholesale Order - ₹${total.toFixed(2)}`
+                  ) : paymentMethod === 'razorpay' ? (
+                    `Pay with Razorpay - ₹${total.toFixed(2)}`
                   ) : (
                     `Place Wholesale Order - ₹${total.toFixed(2)}`
                   )}
