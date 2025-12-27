@@ -50,7 +50,7 @@ jobs:
     - name: Build and push frontend
       run: |
         cd frontend
-        docker build -t ${{ secrets.DOCKER_USERNAME }}/rdgm-frontend:latest .
+        docker build --build-arg NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }} --build-arg NEXT_PUBLIC_RAZORPAY_KEY_ID=${{ secrets.NEXT_PUBLIC_RAZORPAY_KEY_ID }} -t ${{ secrets.DOCKER_USERNAME }}/rdgm-frontend:latest .
         docker push ${{ secrets.DOCKER_USERNAME }}/rdgm-frontend:latest
     
     - name: Deploy to EC2
