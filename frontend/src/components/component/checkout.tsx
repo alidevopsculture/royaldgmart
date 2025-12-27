@@ -73,7 +73,9 @@ export default function Checkout() {
           const testResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/test-auth`, {
             credentials: 'include'
           });
-          console.log('API connection test:', testResponse.status);
+          if (testResponse) {
+            console.log('API connection test:', testResponse.status);
+          }
         } catch (error) {
           console.error('API connection failed:', error);
           toast.error('Cannot connect to server. Please check if the backend is running.');
@@ -194,6 +196,10 @@ export default function Checkout() {
       // Create Razorpay order
       const razorpayOrder = await createRazorpayOrderClient(total);
       
+      if (!razorpayOrder || !razorpayOrder.orderId) {
+        throw new Error('Failed to create Razorpay order');
+      }
+      
       const options = {
         key: razorpayOrder.key,
         amount: razorpayOrder.amount,
@@ -204,11 +210,19 @@ export default function Checkout() {
         order_id: razorpayOrder.orderId,
         handler: async function (response: any) {
           try {
+            if (!response) {
+              throw new Error('Payment response is empty');
+            }
             // Verify payment
-            await verifyRazorpayPaymentClient(response, orderResult.orderId);
-            toast.success('Payment successful!');
-            router.push(`/order-confirmation?orderId=${orderResult.orderId}&total=${total.toFixed(2)}`);
+            const verificationResult = await verifyRazorpayPaymentClient(response, orderResult.orderId);
+            if (verificationResult && verificationResult.success) {
+              toast.success('Payment successful!');
+              router.push(`/order-confirmation?orderId=${orderResult.orderId}&total=${total.toFixed(2)}`);
+            } else {
+              throw new Error('Payment verification failed');
+            }
           } catch (error: any) {
+            console.error('Payment handler error:', error);
             toast.error(error.message || 'Payment verification failed');
           }
         },
