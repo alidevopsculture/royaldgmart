@@ -24,8 +24,11 @@ const orderSchema = new mongoose.Schema({
   shipping: { type: Number, required: true },
   tax: { type: Number, required: true },
   total: { type: Number, required: true },
-  paymentMethod: { type: String, enum: ['cod', 'card', 'upi'], default: 'cod' },
+  paymentMethod: { type: String, enum: ['cod', 'card', 'upi', 'razorpay'], default: 'cod' },
   paymentScreenshot: { type: String }, // URL to uploaded payment screenshot for UPI payments
+  razorpayOrderId: { type: String },
+  razorpayPaymentId: { type: String },
+  razorpaySignature: { type: String },
   status: { type: String, enum: ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled', 'returned'], default: 'pending' },
   paymentStatus: { type: String, enum: ['pending', 'completed', 'failed'], default: 'pending' },
   cancelReason: { type: String },

@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { ShoppingBag, User, CreditCard, MapPin, Phone, Mail, Truck, Banknote, Upload, Copy, CheckCircle, AlertCircle } from 'lucide-react';
 import { getUserData } from '@/actions/auth';
 import { getAllCarts, transferGuestCartToUser } from '@/actions/cart';
+import { createRazorpayOrderClient, verifyRazorpayPaymentClient } from '@/actions/payment-client';
 import { getCartIdentifier, hasCartItems, clearGuestSession, getCurrentGuestSession } from '@/lib/cart-utils';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
@@ -178,8 +179,90 @@ export default function Checkout() {
     }
   };
 
+  const handleRazorpayPayment = async () => {
+    try {
+      setOrderLoading(true);
+      
+      // First create the order in your database
+      const { createOrder } = await import('@/actions/order');
+      const orderResult = await createOrder(formData, 'razorpay', null);
+      
+      if (!orderResult || !orderResult.orderId) {
+        throw new Error('Failed to create order');
+      }
+
+      // Create Razorpay order
+      const razorpayOrder = await createRazorpayOrderClient(total);
+      
+      const options = {
+        key: razorpayOrder.key,
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
+        name: 'Royal Digital Mart',
+        description: 'Order Payment',
+        image: '/favicon.ico', // Your logo URL
+        order_id: razorpayOrder.orderId,
+        handler: async function (response: any) {
+          try {
+            // Verify payment
+            await verifyRazorpayPaymentClient(response, orderResult.orderId);
+            toast.success('Payment successful!');
+            router.push(`/order-confirmation?orderId=${orderResult.orderId}&total=${total.toFixed(2)}`);
+          } catch (error: any) {
+            toast.error(error.message || 'Payment verification failed');
+          }
+        },
+        prefill: {
+          name: `${formData.firstName} ${formData.lastName}`,
+          email: formData.email,
+          contact: formData.phone,
+        },
+        notes: {
+          address: formData.address,
+          city: formData.city
+        },
+        theme: {
+          color: '#6366f1',
+        },
+        modal: {
+          ondismiss: function() {
+            toast.error('Payment cancelled');
+          }
+        }
+      };
+
+      const razorpay = new (window as any).Razorpay(options);
+      razorpay.open();
+      
+    } catch (error: any) {
+      console.error('Razorpay payment error:', error);
+      toast.error(error.message || 'Payment failed');
+    } finally {
+      setOrderLoading(false);
+    }
+  };
+
   const handlePlaceOrder = async () => {
     console.log('Button clicked! Payment method:', paymentMethod, 'Show UPI details:', showUpiDetails);
+    
+    // If Razorpay payment, handle it separately
+    if (paymentMethod === 'razorpay') {
+      // Validate required fields first
+      if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.address || !formData.city || !formData.zipCode) {
+        toast.error('Please fill all required fields');
+        return;
+      }
+      
+      // Check if cart has items
+      if (!cart || !cart.products || cart.products.length === 0) {
+        toast.error('Your cart is empty');
+        router.push('/cart');
+        return;
+      }
+      
+      await handleRazorpayPayment();
+      return;
+    }
     
     // If UPI payment and not showing details yet, show UPI payment details
     if (paymentMethod === 'upi' && !showUpiDetails) {
@@ -547,22 +630,22 @@ export default function Checkout() {
                 <div className="grid grid-cols-3 gap-4">
                   <div 
                     className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                      paymentMethod === 'card' 
-                        ? 'border-indigo-400 bg-indigo-50' 
+                      paymentMethod === 'razorpay' 
+                        ? 'border-blue-400 bg-blue-50' 
                         : 'border-gray-200 hover:border-gray-400'
                     }`}
-                    onClick={() => setPaymentMethod('card')}
+                    onClick={() => setPaymentMethod('razorpay')}
                   >
                     <div className="text-center">
                       <CreditCard className={`h-8 w-8 mx-auto mb-2 ${
-                        paymentMethod === 'card' ? 'text-indigo-600' : 'text-gray-600'
+                        paymentMethod === 'razorpay' ? 'text-blue-600' : 'text-gray-600'
                       }`} />
                       <p className={`font-semibold ${
-                        paymentMethod === 'card' ? 'text-indigo-900' : 'text-gray-900'
-                      }`}>Card Payment</p>
+                        paymentMethod === 'razorpay' ? 'text-blue-900' : 'text-gray-900'
+                      }`}>Razorpay</p>
                       <p className={`text-sm ${
-                        paymentMethod === 'card' ? 'text-indigo-600' : 'text-gray-600'
-                      }`}>Credit/Debit Cards</p>
+                        paymentMethod === 'razorpay' ? 'text-blue-600' : 'text-gray-600'
+                      }`}>Cards, UPI, Wallets</p>
                     </div>
                   </div>
                   <div 
@@ -622,10 +705,10 @@ export default function Checkout() {
                   </div>
                 )}
                 
-                {paymentMethod === 'card' && (
-                  <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <p className="text-sm text-yellow-800">
-                      💳 Payment gateway integration will be implemented here (Razorpay, Stripe, etc.)
+                {paymentMethod === 'razorpay' && (
+                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      💳 Secure payment with Cards, UPI, Net Banking & Wallets via Razorpay
                     </p>
                   </div>
                 )}
@@ -719,6 +802,8 @@ export default function Checkout() {
                     `Proceed to UPI Payment - ₹${total.toFixed(2)}`
                   ) : paymentMethod === 'upi' && showUpiDetails ? (
                     `Complete Order - ₹${total.toFixed(2)}`
+                  ) : paymentMethod === 'razorpay' ? (
+                    `Pay with Razorpay - ₹${total.toFixed(2)}`
                   ) : (
                     `Place Order - ₹${total.toFixed(2)}`
                   )}

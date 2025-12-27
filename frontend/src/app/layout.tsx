@@ -6,6 +6,7 @@ import ConditionalNavbar from "@/components/component/ConditionalNavbar";
 import MobileToast from "@/components/functional/MobileToast";
 import MobileBottomNav from "@/components/functional/MobileBottomNav";
 import Footer from "@/components/functional/Footer";
+import Script from "next/script";
 
 const quicksand = Quicksand({
   subsets: ["latin"],
@@ -29,6 +30,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${quicksand.className} pb-16 lg:pb-0`}>
+        <Script 
+          src="https://checkout.razorpay.com/v1/checkout.js"
+          strategy="lazyOnload"
+        />
         <Toaster 
           position="top-right" 
           toastOptions={{
