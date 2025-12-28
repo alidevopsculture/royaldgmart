@@ -118,7 +118,7 @@ export default async function Homepage({ user }: { user: any }) {
                 Be the first to know!
               </h2>
               <p className="text-lg sm:text-xl text-gray-600 font-light max-w-2xl mx-auto">
-                “Wear the culture, not trends — let every thread tell your story.”
+                “about every new drop and special collection we release. Your favourites may arrive at any moment, so this space is always worth a second look.”
                 
               </p>
             </div>
@@ -132,7 +132,8 @@ export default async function Homepage({ user }: { user: any }) {
               ) : (
                 <div className="col-span-full text-center py-16">
                   <div className="text-gray-400 text-lg font-light">
-                    Each product is checked for quality before it reaches this section
+                    Wear the culture, not trends — let every thread tell your story. Every design is chosen to reflect the elegance of tradition with the comfort you need every day.
+                    Each product is carefully checked for fabric, finishing and detailing before it reaches this section. That way you can shop with confidence, trusting the quality on your screen will match what arrives at your door.
                   </div>
                 </div>
               )}
