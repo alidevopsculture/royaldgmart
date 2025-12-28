@@ -9,6 +9,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Button } from "@/components/ui/button"
 import { addProductToCart } from "@/actions/cart"
 import { productData } from "@/types/product"
+import { cleanDropdownText } from "@/lib/text-utils"
 
 interface ProductViewClientProps {
   product: productData
@@ -148,14 +149,14 @@ export function ProductViewClient({ product, productId, user }: ProductViewClien
           onValueChange={(value) => setQuantity(parseInt(value))}
         >
           <SelectTrigger className="w-24">
-            <SelectValue placeholder="Select" />
+            <SelectValue placeholder={cleanDropdownText('Select')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="1">1</SelectItem>
-            <SelectItem value="2">2</SelectItem>
-            <SelectItem value="3">3</SelectItem>
-            <SelectItem value="4">4</SelectItem>
-            <SelectItem value="5">5</SelectItem>
+            <SelectItem value="1">{cleanDropdownText('1')}</SelectItem>
+            <SelectItem value="2">{cleanDropdownText('2')}</SelectItem>
+            <SelectItem value="3">{cleanDropdownText('3')}</SelectItem>
+            <SelectItem value="4">{cleanDropdownText('4')}</SelectItem>
+            <SelectItem value="5">{cleanDropdownText('5')}</SelectItem>
           </SelectContent>
         </Select>
       </div>

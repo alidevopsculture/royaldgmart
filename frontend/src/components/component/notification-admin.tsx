@@ -11,6 +11,7 @@ import { Checkbox } from '../ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 import { Eye, Save } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { cleanDropdownText } from '@/lib/text-utils'
 
 export default function NotificationAdmin() {
   const [notification, setNotification] = useState<NotificationData>({
@@ -175,7 +176,7 @@ export default function NotificationAdmin() {
                       <SelectItem key={option.value} value={option.value}>
                         <div className="flex items-center gap-2">
                           <div className={`w-4 h-4 bg-gradient-to-r ${option.value} rounded`}></div>
-                          {option.label}
+                          {cleanDropdownText(option.label)}
                         </div>
                       </SelectItem>
                     ))}

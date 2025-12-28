@@ -43,6 +43,7 @@ import { Slider } from "@/components/ui/slider"
 import toast, { Toaster } from "react-hot-toast"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu"
 import { useRouter } from "next/navigation"
+import { cleanDropdownText } from "@/lib/text-utils"
 
 
 export type SizersAndColorsType ={
@@ -195,16 +196,16 @@ export function Createproduct() {
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
                 {/* <ListOrderedIcon className="h-4 w-4 mr-2" /> */}
-                {otherData.category!='' ? otherData.category: 'Select Category'}
+                {otherData.category!='' ? cleanDropdownText(otherData.category): cleanDropdownText('Select Category')}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">
-              <DropdownMenuLabel>Category</DropdownMenuLabel>
+              <DropdownMenuLabel>{cleanDropdownText('Category')}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuRadioGroup onValueChange={(e)=>setOtherData({...otherData,category:e})} >
                 {categories.map((item)=>{
                   return(
-                    <DropdownMenuRadioItem key={item} value={item}>{item}</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem key={item} value={item}>{cleanDropdownText(item)}</DropdownMenuRadioItem>
                   )
                 })}
               </DropdownMenuRadioGroup>
