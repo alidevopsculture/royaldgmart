@@ -39,7 +39,16 @@ export function Orders() {
   const [loading, setLoading] = useState(true)
   const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, count: 0 })
   const [adminUpdates, setAdminUpdates] = useState<{[key: string]: {status: string, reason?: string}}>({})
-  const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null)
+
+  // Get auth headers
+  const getAuthHeaders = () => {
+    const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
+    return {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    };
+  };
 
   useEffect(() => {
     // Load admin updates from localStorage
@@ -87,7 +96,9 @@ export function Orders() {
   const fetchOrders = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://www.royaldgmart.com'}/api/orders/all`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/all`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
         credentials: 'include'
       })
       
@@ -107,16 +118,13 @@ export function Orders() {
   }
 
   const handleStatusUpdate = async (orderId: string, status: string) => {
-    const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'https://www.royaldgmart.com'}/api/orders/admin/${orderId}/status`
+    const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/orders/admin/${orderId}/status`
     console.log('Updating order status:', { orderId, status, apiUrl })
     
     try {
       const response = await fetch(apiUrl, {
         method: 'PUT',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
+        headers: getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify({ status })
       })
@@ -168,8 +176,9 @@ export function Orders() {
     if (!confirm('Are you sure you want to delete this order?')) return
     
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://www.royaldgmart.com'}/api/orders/${orderId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${orderId}`, {
         method: 'DELETE',
+        headers: getAuthHeaders(),
         credentials: 'include'
       })
       
@@ -302,7 +311,7 @@ export function Orders() {
             {loading ? (
               <div className="flex justify-center items-center h-64">
                 <div className="flex flex-col items-center gap-4">
-                  <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full"></div>
+                  <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
                   <div className="text-center">
                     <p className="text-lg font-semibold text-gray-700">Loading orders...</p>
                     <p className="text-sm text-gray-500">Fetching the latest order data</p>
@@ -333,7 +342,6 @@ export function Orders() {
                       )}
                     </TableHead>
                     <TableHead className="hidden lg:table-cell font-semibold text-gray-700">Payment</TableHead>
-                    <TableHead className="hidden xl:table-cell font-semibold text-gray-700">Screenshot</TableHead>
                     <TableHead className="font-semibold text-gray-700">Status</TableHead>
                     <TableHead className="hidden lg:table-cell font-semibold text-gray-700">Cancel/Return</TableHead>
                     <TableHead className="text-right font-semibold text-gray-700">Actions</TableHead>
@@ -364,8 +372,7 @@ export function Orders() {
                           <div className="space-y-1">
                             <div className="text-sm font-medium text-gray-900">
                               {order.paymentMethod === 'cod' ? 'COD' :
-                               order.paymentMethod === 'card' ? 'Card' :
-                               order.paymentMethod === 'upi' ? 'UPI' : 'Unknown'}
+                               order.paymentMethod === 'razorpay' ? 'Razorpay' : 'Unknown'}
                             </div>
                             <div className="text-xs text-gray-500">
                               {order.paymentStatus === 'completed' ? 'Paid' :
@@ -373,35 +380,6 @@ export function Orders() {
                                order.paymentStatus === 'failed' ? 'Failed' : 'Unknown'}
                             </div>
                           </div>
-                        </TableCell>
-                        <TableCell className="hidden xl:table-cell">
-                          {order.paymentMethod === 'upi' && order.paymentScreenshot ? (
-                            <div className="flex items-center gap-2">
-                              <div className="relative w-8 h-8 rounded border overflow-hidden">
-                                <Image
-                                  src={`${process.env.NEXT_PUBLIC_API_URL || 'https://www.royaldgmart.com'}/uploads/payment-screenshots/${order.paymentScreenshot}`}
-                                  alt="Payment Screenshot"
-                                  fill
-                                  className="object-cover"
-                                />
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 px-2 text-xs"
-                                onClick={() => {
-                                  const imageUrl = `${process.env.NEXT_PUBLIC_API_URL || 'https://www.royaldgmart.com'}/uploads/payment-screenshots/${order.paymentScreenshot}`
-                                  setSelectedScreenshot(imageUrl)
-                                }}
-                              >
-                                <Eye className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          ) : order.paymentMethod === 'upi' ? (
-                            <span className="text-xs text-red-500">No screenshot</span>
-                          ) : (
-                            <span className="text-xs text-gray-400">-</span>
-                          )}
                         </TableCell>
                         <TableCell>
                           <span className={`inline-flex px-2 py-1 text-xs font-medium rounded ${
@@ -505,7 +483,7 @@ export function Orders() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-12">
+                      <TableCell colSpan={8} className="text-center py-12">
                         <p className="text-gray-500">No orders found</p>
                       </TableCell>
                     </TableRow>
@@ -515,29 +493,6 @@ export function Orders() {
             )}
         </div>
       </div>
-      
-      {/* Screenshot Modal */}
-      {selectedScreenshot && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setSelectedScreenshot(null)}>
-          <div className="bg-white p-4 rounded-lg max-w-2xl max-h-[90vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Payment Screenshot</h3>
-              <Button variant="ghost" size="sm" onClick={() => setSelectedScreenshot(null)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="relative">
-              <Image
-                src={selectedScreenshot}
-                alt="Payment Screenshot"
-                width={600}
-                height={400}
-                className="rounded-lg object-contain"
-              />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingBag, User, CreditCard, MapPin, Phone, Mail, Truck, Banknote, Upload, Copy, CheckCircle, AlertCircle } from 'lucide-react';
+import { ShoppingBag, User, CreditCard, MapPin, Phone, Mail, Truck, Banknote, AlertCircle } from 'lucide-react';
 import { getUserData } from '@/actions/auth';
 import { getAllCarts, transferGuestCartToUser } from '@/actions/cart';
 import { createRazorpayOrderClient, verifyRazorpayPaymentClient } from '@/actions/payment-client';
@@ -58,9 +58,6 @@ export default function Checkout() {
     country: 'India'
   });
   const [paymentMethod, setPaymentMethod] = useState('cod');
-  const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
-  const [upiIdCopied, setUpiIdCopied] = useState(false);
-  const [showUpiDetails, setShowUpiDetails] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -177,33 +174,6 @@ export default function Checkout() {
     }));
   };
 
-  const handleScreenshotUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('File size should be less than 5MB');
-        return;
-      }
-      if (!file.type.startsWith('image/')) {
-        toast.error('Please upload an image file');
-        return;
-      }
-      setPaymentScreenshot(file);
-      toast.success('Screenshot uploaded successfully!');
-    }
-  };
-
-  const copyUpiId = async () => {
-    try {
-      await navigator.clipboard.writeText('7266849104-3@ybl');
-      setUpiIdCopied(true);
-      toast.success('UPI ID copied to clipboard!');
-      setTimeout(() => setUpiIdCopied(false), 2000);
-    } catch (err) {
-      toast.error('Failed to copy UPI ID');
-    }
-  };
-
   const handleRazorpayPayment = async () => {
     try {
       setOrderLoading(true);
@@ -229,7 +199,7 @@ export default function Checkout() {
         currency: razorpayOrder.currency,
         name: 'Royal Digital Mart',
         description: 'Order Payment',
-        image: '/favicon.ico', // Your logo URL
+        image: '/favicon.ico',
         order_id: razorpayOrder.orderId,
         handler: async function (response: any) {
           try {
@@ -280,80 +250,29 @@ export default function Checkout() {
   };
 
   const handlePlaceOrder = async () => {
-    console.log('Button clicked! Payment method:', paymentMethod, 'Show UPI details:', showUpiDetails);
-    
-    // If Razorpay payment, handle it separately
-    if (paymentMethod === 'razorpay') {
-      // Validate required fields first
-      if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.address || !formData.city || !formData.zipCode) {
-        toast.error('Please fill all required fields');
-        return;
-      }
-      
-      // Check if cart has items
-      if (!cart || !cart.products || cart.products.length === 0) {
-        toast.error('Your cart is empty');
-        router.push('/cart');
-        return;
-      }
-      
-      await handleRazorpayPayment();
-      return;
-    }
-    
-    // If UPI payment and not showing details yet, show UPI payment details
-    if (paymentMethod === 'upi' && !showUpiDetails) {
-      console.log('Showing UPI details...');
-      setShowUpiDetails(true);
-      toast.success('Please complete UPI payment and upload screenshot');
-      return;
-    }
-
-    // Always validate required fields since they're needed for order
-    console.log('Current form data:', formData);
+    // Validate required fields first
     if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.address || !formData.city || !formData.zipCode) {
-      console.log('Missing fields:', {
-        firstName: !formData.firstName,
-        lastName: !formData.lastName,
-        email: !formData.email,
-        phone: !formData.phone,
-        address: !formData.address,
-        city: !formData.city,
-        zipCode: !formData.zipCode
-      });
       toast.error('Please fill all required fields');
-      if (showUpiDetails) {
-        setShowUpiDetails(false);
-      }
       return;
     }
-
-    // If UPI payment and showing details, check for screenshot
-    if (paymentMethod === 'upi' && showUpiDetails && !paymentScreenshot) {
-      toast.error('Please upload payment screenshot for UPI payment');
-      return;
-    }
-
+    
     // Check if cart has items
     if (!cart || !cart.products || cart.products.length === 0) {
       toast.error('Your cart is empty');
       router.push('/cart');
       return;
     }
+    
+    // If Razorpay payment, handle it separately
+    if (paymentMethod === 'razorpay') {
+      await handleRazorpayPayment();
+      return;
+    }
 
     setOrderLoading(true);
     try {
       const { createOrder } = await import('@/actions/order');
-      console.log('Form data being sent:', formData);
-      console.log('Placing order with:', {
-        formData,
-        paymentMethod,
-        showUpiDetails,
-        hasScreenshot: !!paymentScreenshot,
-        cartItems: cart.products.length
-      });
-      
-      const result = await createOrder(formData, paymentMethod, paymentScreenshot);
+      const result = await createOrder(formData, paymentMethod, null);
       
       if (result && result.orderId) {
         toast.success('Order placed successfully!');
@@ -423,128 +342,6 @@ export default function Checkout() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* UPI Payment Details Modal */}
-          {showUpiDetails && paymentMethod === 'upi' && (
-            <div className="lg:col-span-3 mb-6">
-              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-                <CardHeader className="bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-t-lg">
-                  <CardTitle className="flex items-center gap-2">
-                    <Phone className="h-5 w-5" />
-                    Complete UPI Payment
-                  </CardTitle>
-                  <CardDescription className="text-green-100">
-                    Pay ₹{total.toFixed(2)} using UPI and upload payment screenshot
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Left side - UPI ID and QR Code */}
-                    <div className="space-y-4">
-                      {/* UPI ID */}
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700">UPI ID:</Label>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Input 
-                            value="7266849104-3@ybl" 
-                            readOnly 
-                            className="bg-gray-50 font-mono text-sm"
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={copyUpiId}
-                            className="flex items-center gap-1"
-                          >
-                            {upiIdCopied ? (
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                            ) : (
-                              <Copy className="h-4 w-4" />
-                            )}
-                            {upiIdCopied ? 'Copied!' : 'Copy'}
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      {/* QR Code */}
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700 mb-2 block">Scan QR Code:</Label>
-                        <div className="flex justify-center">
-                          <div className="bg-white p-4 rounded-lg border-2 border-dashed border-gray-300">
-                            <Image
-                              src="/images/upi_qr.jpeg"
-                              alt="UPI QR Code"
-                              width={200}
-                              height={200}
-                              className="rounded-lg"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Right side - Screenshot Upload and Instructions */}
-                    <div className="space-y-4">
-                      {/* Screenshot Upload */}
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700 mb-2 block">
-                          Upload Payment Screenshot: *
-                        </Label>
-                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-green-400 transition-colors">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleScreenshotUpload}
-                            className="hidden"
-                            id="screenshot-upload"
-                          />
-                          <label htmlFor="screenshot-upload" className="cursor-pointer">
-                            <Upload className="h-12 w-12 mx-auto mb-3 text-gray-400" />
-                            <p className="text-sm text-gray-600 mb-2">
-                              {paymentScreenshot ? (
-                                <span className="text-green-600 font-medium">
-                                  ✓ {paymentScreenshot.name}
-                                </span>
-                              ) : (
-                                'Click to upload payment screenshot'
-                              )}
-                            </p>
-                            <p className="text-xs text-gray-400">PNG, JPG up to 5MB</p>
-                          </label>
-                        </div>
-                      </div>
-                      
-                      {/* Instructions */}
-                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <h4 className="font-semibold text-blue-800 mb-2">Payment Instructions:</h4>
-                        <ol className="text-sm text-blue-700 space-y-1">
-                          <li>1. Pay <strong>₹{total.toFixed(2)}</strong> to UPI ID: <strong>7266849104-3@ybl</strong></li>
-                          <li>2. Or scan the QR code with any UPI app</li>
-                          <li>3. Take a screenshot of payment confirmation</li>
-                          <li>4. Upload the screenshot above</li>
-                          <li>5. Click "Complete Order" to finish</li>
-                        </ol>
-                      </div>
-                      
-                      {/* Back Button */}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setShowUpiDetails(false)
-                          setPaymentScreenshot(null)
-                        }}
-                        className="w-full"
-                      >
-                        ← Back to Payment Selection
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-          
           {/* Shipping & Billing Information */}
           <div className="lg:col-span-2 space-y-6">
             {/* Shipping Information */}
@@ -567,7 +364,6 @@ export default function Checkout() {
                       name="firstName"
                       value={formData.firstName}
                       onChange={handleInputChange}
-
                       className="mt-1"
                     />
                   </div>
@@ -578,7 +374,6 @@ export default function Checkout() {
                       name="lastName"
                       value={formData.lastName}
                       onChange={handleInputChange}
-
                       className="mt-1"
                     />
                   </div>
@@ -593,7 +388,6 @@ export default function Checkout() {
                       type="email"
                       value={formData.email}
                       onChange={handleInputChange}
-
                       className="mt-1"
                     />
                   </div>
@@ -605,7 +399,6 @@ export default function Checkout() {
                       type="tel"
                       value={formData.phone}
                       onChange={handleInputChange}
-
                       className="mt-1"
                     />
                   </div>
@@ -618,7 +411,6 @@ export default function Checkout() {
                     name="address"
                     value={formData.address}
                     onChange={handleInputChange}
-
                     className="mt-1"
                     rows={3}
                   />
@@ -632,7 +424,6 @@ export default function Checkout() {
                       name="city"
                       value={formData.city}
                       onChange={handleInputChange}
-
                       className="mt-1"
                     />
                   </div>
@@ -643,7 +434,6 @@ export default function Checkout() {
                       name="state"
                       value={formData.state}
                       onChange={handleInputChange}
-
                       className="mt-1"
                     />
                   </div>
@@ -654,28 +444,26 @@ export default function Checkout() {
                       name="zipCode"
                       value={formData.zipCode}
                       onChange={handleInputChange}
-
                       className="mt-1"
                     />
                   </div>
                 </div>
               </CardContent>
-              </Card>
+            </Card>
 
             {/* Payment Method */}
-            {!showUpiDetails && (
-              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-                <CardHeader className="bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-t-lg">
-                  <CardTitle className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5" />
-                    Payment Method
-                  </CardTitle>
-                  <CardDescription className="text-green-100">
-                    Choose your preferred payment option
-                  </CardDescription>
-                </CardHeader>
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader className="bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-t-lg">
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5" />
+                  Payment Method
+                </CardTitle>
+                <CardDescription className="text-green-100">
+                  Choose your preferred payment option
+                </CardDescription>
+              </CardHeader>
               <CardContent className="p-6">
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div 
                     className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
                       paymentMethod === 'razorpay' 
@@ -694,26 +482,6 @@ export default function Checkout() {
                       <p className={`text-sm ${
                         paymentMethod === 'razorpay' ? 'text-blue-600' : 'text-gray-600'
                       }`}>Cards, UPI, Wallets</p>
-                    </div>
-                  </div>
-                  <div 
-                    className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                      paymentMethod === 'upi' 
-                        ? 'border-green-400 bg-green-50' 
-                        : 'border-gray-200 hover:border-gray-400'
-                    }`}
-                    onClick={() => setPaymentMethod('upi')}
-                  >
-                    <div className="text-center">
-                      <Phone className={`h-8 w-8 mx-auto mb-2 ${
-                        paymentMethod === 'upi' ? 'text-green-600' : 'text-gray-600'
-                      }`} />
-                      <p className={`font-semibold ${
-                        paymentMethod === 'upi' ? 'text-green-900' : 'text-gray-900'
-                      }`}>UPI Payment</p>
-                      <p className={`text-sm ${
-                        paymentMethod === 'upi' ? 'text-green-600' : 'text-gray-600'
-                      }`}>PhonePe, GPay, Paytm</p>
                     </div>
                   </div>
                   <div 
@@ -745,14 +513,6 @@ export default function Checkout() {
                   </div>
                 )}
                 
-                {paymentMethod === 'upi' && !showUpiDetails && (
-                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-sm text-blue-800">
-                      📱 Click "Place Order" to proceed with UPI payment. You'll get payment details in the next step.
-                    </p>
-                  </div>
-                )}
-                
                 {paymentMethod === 'razorpay' && (
                   <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <p className="text-sm text-blue-800">
@@ -760,13 +520,12 @@ export default function Checkout() {
                     </p>
                   </div>
                 )}
-                </CardContent>
-              </Card>
-            )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Order Summary */}
-          <div className={showUpiDetails && paymentMethod === 'upi' ? 'lg:col-span-3' : ''}>
+          <div>
             <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm sticky top-4">
               <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-t-lg">
                 <CardTitle className="flex items-center gap-2">
@@ -846,10 +605,6 @@ export default function Checkout() {
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                       Placing Order...
                     </div>
-                  ) : paymentMethod === 'upi' && !showUpiDetails ? (
-                    `Proceed to UPI Payment - ₹${total.toFixed(2)}`
-                  ) : paymentMethod === 'upi' && showUpiDetails ? (
-                    `Complete Order - ₹${total.toFixed(2)}`
                   ) : paymentMethod === 'razorpay' ? (
                     `Pay with Razorpay - ₹${total.toFixed(2)}`
                   ) : (
