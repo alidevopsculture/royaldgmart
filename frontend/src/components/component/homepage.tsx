@@ -115,10 +115,11 @@ export default async function Homepage({ user }: { user: any }) {
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-12 sm:mb-16">
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-light text-gray-900 mb-4">
-                New Arrivals
+                Be the first to know!
               </h2>
               <p className="text-lg sm:text-xl text-gray-600 font-light max-w-2xl mx-auto">
-                Discover our latest collection of handpicked designs
+                “Wear the culture, not trends — let every thread tell your story.”
+                
               </p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
@@ -131,7 +132,7 @@ export default async function Homepage({ user }: { user: any }) {
               ) : (
                 <div className="col-span-full text-center py-16">
                   <div className="text-gray-400 text-lg font-light">
-                    No new arrivals found. Please check your product data.
+                    Each product is checked for quality before it reaches this section
                   </div>
                 </div>
               )}
@@ -144,10 +145,10 @@ export default async function Homepage({ user }: { user: any }) {
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-12 sm:mb-16">
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-light text-gray-900 mb-4">
-                Our Collections
+                Pick from Collections
               </h2>
               <p className="text-lg sm:text-xl text-gray-600 font-light max-w-2xl mx-auto">
-                Curated categories for every occasion and style
+                Curated collections for every occasion and style
               </p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
