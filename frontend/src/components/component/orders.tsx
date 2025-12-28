@@ -29,6 +29,7 @@ import { Badge } from "@/components/ui/badge"
 import toast from "react-hot-toast"
 import { Search, Eye, X } from "lucide-react"
 import Image from "next/image"
+import { cleanDropdownText } from "@/lib/text-utils"
 
 export function Orders() {
   const [search, setSearch] = useState("")
@@ -470,7 +471,7 @@ export function Orders() {
                                 <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'shipped')}>Shipped</DropdownMenuCheckboxItem>
                                 <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'delivered')}>Delivered</DropdownMenuCheckboxItem>
                                 <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'return_approved')}>Return Approved</DropdownMenuCheckboxItem>
-                              <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'return_initiated')}>Return Initiated</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'return_initiated')}>Return Initiated</DropdownMenuCheckboxItem>
                                 <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'rejected')}>Rejected</DropdownMenuCheckboxItem>
                               </DropdownMenuContent>
                             </DropdownMenu>

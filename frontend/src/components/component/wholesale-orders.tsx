@@ -8,6 +8,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import Image from "next/image"
 import toast from "react-hot-toast"
+import { cleanDropdownText } from "@/lib/text-utils"
 
 export function WholesaleOrders() {
   const [search, setSearch] = useState("")
@@ -346,49 +347,49 @@ export function WholesaleOrders() {
                 </Button>
               </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48 bg-white/95 backdrop-blur-xl border-white/20">
-                  <DropdownMenuLabel>Filter by status</DropdownMenuLabel>
+                  <DropdownMenuLabel>{cleanDropdownText('Filter by status')}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuCheckboxItem
                     checked={selectedStatus === "all"}
                     onCheckedChange={() => setSelectedStatus("all")}
                   >
-                    All
+                    {cleanDropdownText('All')}
                   </DropdownMenuCheckboxItem>
                   <DropdownMenuCheckboxItem
                     checked={selectedStatus === "pending"}
                     onCheckedChange={() => setSelectedStatus("pending")}
                   >
-                    Pending
+                    {cleanDropdownText('Pending')}
                   </DropdownMenuCheckboxItem>
                   <DropdownMenuCheckboxItem
                     checked={selectedStatus === "confirmed"}
                     onCheckedChange={() => setSelectedStatus("confirmed")}
                   >
-                    Confirmed
+                    {cleanDropdownText('Confirmed')}
                   </DropdownMenuCheckboxItem>
                   <DropdownMenuCheckboxItem
                     checked={selectedStatus === "shipped"}
                     onCheckedChange={() => setSelectedStatus("shipped")}
                   >
-                    Shipped
+                    {cleanDropdownText('Shipped')}
                   </DropdownMenuCheckboxItem>
                   <DropdownMenuCheckboxItem
                     checked={selectedStatus === "delivered"}
                     onCheckedChange={() => setSelectedStatus("delivered")}
                   >
-                    Delivered
+                    {cleanDropdownText('Delivered')}
                   </DropdownMenuCheckboxItem>
                   <DropdownMenuCheckboxItem
                     checked={selectedStatus === "cancelled"}
                     onCheckedChange={() => setSelectedStatus("cancelled")}
                   >
-                    Cancelled
+                    {cleanDropdownText('Cancelled')}
                   </DropdownMenuCheckboxItem>
                   <DropdownMenuCheckboxItem
                     checked={selectedStatus === "returned"}
                     onCheckedChange={() => setSelectedStatus("returned")}
                   >
-                    Returned
+                    {cleanDropdownText('Returned')}
                   </DropdownMenuCheckboxItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -575,15 +576,15 @@ export function WholesaleOrders() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent>
-                                <DropdownMenuLabel>Update Status</DropdownMenuLabel>
+                                <DropdownMenuLabel>{cleanDropdownText('Update Status')}</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'pending')}>Pending</DropdownMenuCheckboxItem>
-                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'confirmed')}>Confirmed</DropdownMenuCheckboxItem>
-                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'shipped')}>Shipped</DropdownMenuCheckboxItem>
-                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'delivered')}>Delivered</DropdownMenuCheckboxItem>
-                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'return_approved')}>Return Approved</DropdownMenuCheckboxItem>
-                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'return_initiated')}>Return Initiated</DropdownMenuCheckboxItem>
-                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'rejected')}>Rejected</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'pending')}>{cleanDropdownText('Pending')}</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'confirmed')}>{cleanDropdownText('Confirmed')}</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'shipped')}>{cleanDropdownText('Shipped')}</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'delivered')}>{cleanDropdownText('Delivered')}</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'return_approved')}>{cleanDropdownText('Return Approved')}</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'return_initiated')}>{cleanDropdownText('Return Initiated')}</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'rejected')}>{cleanDropdownText('Rejected')}</DropdownMenuCheckboxItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                             <Button 

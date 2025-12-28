@@ -159,6 +159,27 @@ router.post('/create', auth, upload.single('paymentScreenshot'), async (req, res
   }
 });
 
+// Public order tracking (no auth required)
+router.get('/track/:orderId', async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    console.log('Tracking order:', orderId);
+    
+    const order = await Order.findById(orderId)
+      .populate('products.product', 'name price images')
+      .select('-user -__v'); // Exclude sensitive user data
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    res.json({ success: true, order });
+  } catch (error) {
+    console.error('Error tracking order:', error);
+    res.status(500).json({ message: 'Failed to track order' });
+  }
+});
+
 // Get user's order history
 router.get('/my-orders', auth, async (req, res) => {
   try {
