@@ -147,7 +147,7 @@ export default function Navbar() {
     if (category === "MEN COMBOS PACKS") {
       return (
         <Link key={category} href="/men-combos-packs" prefetch={false}
-          className="mx-1 px-3 py-1 rounded-lg bg-amber-600 text-white font-bold"
+         className="mx-1 px-3 py-1 rounded-md hover:bg-gray-100 text-gray-800 font-semibold text-sm transition"
         >
           {category}
         </Link>
