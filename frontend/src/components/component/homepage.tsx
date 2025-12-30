@@ -51,7 +51,7 @@ export default async function Homepage({ user }: { user: any }) {
 
 
   return (
-    <div className="flex flex-col min-h-screen overflow-x-hidden bg-gradient-to-br from-gray-50 to-white">
+    <div className="flex flex-col min-h-screen overflow-x-hidden bg-gradient-to-br from-amber-25 to-stone-50/80">
       <NotificationPopup />
       <main className="flex-1">
         {/* Hero Section - Modern Classic */}
@@ -117,7 +117,7 @@ export default async function Homepage({ user }: { user: any }) {
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-light text-gray-900 mb-4">
                 Be the first to know!
               </h2>
-              <p className="text-lg sm:text-xl text-gray-600 font-light max-w-2xl mx-auto">
+              <p className="text-lg sm:text-xl text-gray-600 font-light italic-bold font-[cursive] max-w-2xl mx-auto">
                 “about every new drop and special collection we release. Your favourites may arrive at any moment, so this space is always worth a second look.”
                 
               </p>
@@ -131,11 +131,12 @@ export default async function Homepage({ user }: { user: any }) {
                 ))
               ) : (
                 <div className="col-span-full text-center py-16">
-                  <div className="text-gray-400 text-lg font-light">
-                    Wear the culture, not trends — let every thread tell your story. Every design is chosen to reflect the elegance of tradition with the comfort you need every day.
-                    Each product is carefully checked for fabric, finishing and detailing before it reaches this section. That way you can shop with confidence, trusting the quality on your screen will match what arrives at your door.
-                  </div>
-                </div>
+  <div className="text-black-400 text-lg font-light italic-bold font-[cursive]">
+    "Wear the culture, not trends — let every thread tell your story. Every design is chosen to reflect the elegance of tradition with the comfort you need every day.
+    Each product is carefully checked for fabric, finishing and detailing before it reaches this section. That way you can shop with confidence, trusting the quality on your screen will match what arrives at your door."
+  </div>
+</div>
+
               )}
             </div>
           </div>
