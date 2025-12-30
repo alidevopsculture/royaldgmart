@@ -167,7 +167,7 @@ function SearchBarComponent({}:SearchBarProps ){
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-50">
                     <div className="text-sm text-gray-600 mb-2 font-medium">Popular searches:</div>
                     <div className="flex flex-wrap gap-2">
-                        {['Sarees', 'Lehenga', 'Electronics', 'Jewelry', 'Fashion', "men's clothing", "women's clothing"].map((term) => (
+                        {['Sarees', 'Lehengas', "men's clothing", "women's clothing"].map((term) => (
                             <button
                                 key={term}
                                 type="button"
