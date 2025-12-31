@@ -8,7 +8,7 @@ async function loadSecrets() {
       
       // Fetch secrets from AWS Secrets Manager
       const secretString = execSync(
-        'aws secretsmanager get-secret-value --secret-id rdgm-backend-prod --region ap-south-1 --query SecretString --output text',
+        'aws secretsmanager get-secret-value --secret-id rdgm-secrets --region ap-south-1 --query SecretString --output text',
         { encoding: 'utf8' }
       );
 
@@ -22,10 +22,12 @@ async function loadSecrets() {
       process.env.ADMIN_PASSWORD = secrets.ADMIN_PASSWORD;
       process.env.AWS_ACCESS_KEY_ID = secrets.AWS_ACCESS_KEY_ID;
       process.env.AWS_SECRET_ACCESS_KEY = secrets.AWS_SECRET_ACCESS_KEY;
-      process.env.S3_BUCKET_NAME = secrets.S3_BUCKET_NAME;
+      process.env.AWS_S3_BUCKET_NAME = secrets.S3_BUCKET_NAME;
       process.env.AWS_REGION = secrets.AWS_REGION;
       process.env.EMAIL_USER = secrets.EMAIL_USER;
       process.env.EMAIL_PASS = secrets.EMAIL_PASS;
+      process.env.RAZORPAY_KEY_ID = secrets.RAZORPAY_KEY_ID;
+      process.env.RAZORPAY_KEY_SECRET = secrets.RAZORPAY_KEY_SECRET;
       
       console.log('✅ Secrets loaded successfully from AWS');
     } else {
