@@ -5,37 +5,35 @@ import { revalidatePath } from "next/cache"
 
 export const createProduct=async(formData:FormData)=>{
     try {
-        // Get token from cookie (server-side) or localStorage (client-side)
-        let token = '';
-        if (typeof window !== 'undefined') {
-            token = localStorage.getItem('token') || '';
-        } else {
-            // For server actions, try to get from cookies (Next.js)
-            try {
-                const { cookies } = await import('next/headers');
-                const cookie = cookies();
-                token = cookie.get('token')?.value || '';
-            } catch (e) {
-                token = '';
-            }
+        // Get token from cookies
+        const { cookies } = await import('next/headers');
+        const cookie = cookies();
+        const token = cookie.get('token')?.value || '';
+        
+        if (!token) {
+            return { error: 'Authentication required', status: 401 };
         }
+        
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products`, {
             method: 'POST',
             body: formData,
-            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
         });
-        if (res.status == 201) {
+        
+        if (res.status === 201) {
             const result = await res.json();
             revalidatePath('/');
             revalidatePath('/search');
             return { result: result.message, status: 201 };
         } else {
             const error = await res.json();
-            throw new Error(error.message);
+            return { error: error.message || 'Failed to create product', status: res.status };
         }
     } catch (error: any) {
         console.error('[ERROR] createProduct:', error?.message || error);
-        return { error: error.message, status: 500 };
+        return { error: error.message || 'Failed to create product', status: 500 };
     }
 }
 

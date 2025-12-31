@@ -26,6 +26,7 @@ interface Review {
   comment: string
   adminReply?: string
   createdAt: string
+  isDummy?: boolean
 }
 
 export default function Reviews() {
@@ -44,10 +45,36 @@ export default function Reviews() {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/reviews/admin/all`, {
         credentials: 'include'
       })
+      let apiReviews = []
       if (response.ok) {
         const data = await response.json()
-        setReviews(data)
+        apiReviews = data
       }
+      
+      // Add dummy reviews
+      const dummyReviews = [
+        {
+          _id: 'dummy-1',
+          user: { firstName: 'Sarah', lastName: 'Johnson', username: 'sarah_j', email: 'sarah@example.com' },
+          product: { _id: 'dummy-product-1', name: 'Premium Silk Saree' },
+          rating: 5,
+          comment: 'Absolutely beautiful saree! The quality is exceptional and the colors are vibrant. Highly recommend!',
+          adminReply: 'Thank you for your wonderful feedback! We\'re delighted you love the saree.',
+          createdAt: '2024-12-20T10:30:00Z',
+          isDummy: true
+        },
+        {
+          _id: 'dummy-2', 
+          user: { firstName: 'Priya', lastName: 'Sharma', username: 'priya_s', email: 'priya@example.com' },
+          product: { _id: 'dummy-product-2', name: 'Designer Lehenga Set' },
+          rating: 4,
+          comment: 'Great quality and fast delivery. The lehenga fits perfectly and looks stunning!',
+          createdAt: '2024-12-18T14:15:00Z',
+          isDummy: true
+        }
+      ]
+      
+      setReviews([...dummyReviews, ...apiReviews])
     } catch (error) {
       console.error('Error fetching reviews:', error)
       toast.error('Failed to load reviews')
@@ -85,6 +112,13 @@ export default function Reviews() {
   }
 
   const handleDelete = async (reviewId: string) => {
+    // Prevent deletion of dummy reviews
+    const review = reviews.find(r => r._id === reviewId)
+    if (review?.isDummy) {
+      toast.error('Demo reviews cannot be deleted')
+      return
+    }
+    
     if (!confirm('Are you sure you want to delete this review?')) return
 
     try {
@@ -159,7 +193,7 @@ export default function Reviews() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="font-medium">{review.product.name}</div>
+                        <div className="font-medium">{review.product?.name || 'Product not found'}</div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
@@ -234,6 +268,7 @@ export default function Reviews() {
                             variant="destructive"
                             onClick={() => handleDelete(review._id)}
                             className="h-6 px-2 text-xs"
+                            disabled={review.isDummy}
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>

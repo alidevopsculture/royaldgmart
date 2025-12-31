@@ -135,8 +135,8 @@ router.post('/' , auth, role.check('admin'), upload.array('images[]', 7), async 
    
     
 
-    if (!name || !price) {
-      return res.status(400).json({ message: 'Missing required fields: name and price' });
+    if (!name || !price || !category) {
+      return res.status(400).json({ message: 'Missing required fields: name, price, and category' });
     }
 
     if (typeof availableSizesColors === 'string') {
