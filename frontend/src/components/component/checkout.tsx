@@ -25,6 +25,8 @@ interface CartItem {
     description: string;
     price: number;
     images: string[];
+    shippingCharges?: number;
+    taxRate?: number;
   };
   quantity: number;
   size: string | null;

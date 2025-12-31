@@ -9,6 +9,8 @@ const cartItem = z.object({
     price: z.number(),
     images: z.array(z.string()),
     category: z.string().optional(),
+    shippingCharges: z.number().optional(),
+    taxRate: z.number().optional(),
   }),
   quantity: z.number().min(1),
   size: z.string().nullable(),
