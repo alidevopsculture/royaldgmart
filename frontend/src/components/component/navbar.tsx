@@ -119,7 +119,7 @@ export default function Navbar() {
 
   // Bottom scrollable navigation categories
   const navCategories = [
-    "SAREE", "WHOLESALE","MEN SUITING SHIRTING","MEN COMBOS PACKS","WOMEN STICHED SUITS",
+    "WHOLESALE","SAREE","MEN SUITING SHIRTING","MEN COMBOS PACKS","WOMEN STICHED SUITS",
     "WOMEN UNSTICHED SUITS", "LEHNGAS", "WOMENS OTHERS", "BED SHEETS",
     "CURTAINS", "BLANKETS" , "MOSQUITO NETS"
   ];

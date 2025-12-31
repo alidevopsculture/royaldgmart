@@ -114,7 +114,7 @@ export default function NotificationPopup() {
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className={`relative max-w-sm w-full mx-4 bg-gradient-to-br ${notification.backgroundColor} rounded-2xl md:rounded-3xl shadow-2xl overflow-hidden transform animate-in zoom-in-95 duration-500`}>
+      <div className={`relative max-w-sm w-full mx-4 bg-gradient-to-br ${notification.backgroundColor} shadow-2xl overflow-hidden transform animate-in zoom-in-95 duration-500`}>
         {/* Close Button */}
         <button
           onClick={handleClose}
@@ -159,7 +159,7 @@ export default function NotificationPopup() {
           </div>
 
           {/* Image */}
-          <div className="mb-4 md:mb-6 rounded-xl md:rounded-2xl overflow-hidden">
+          <div className="mb-4 md:mb-6 overflow-hidden">
             <img
               src={notification.image}
               alt="Offer"
@@ -171,7 +171,7 @@ export default function NotificationPopup() {
           <div className="flex flex-col sm:flex-row gap-3">
             <Button
               onClick={handleShopNow}
-              className="flex-1 bg-white text-gray-900 hover:bg-gray-100 font-semibold py-3 rounded-xl shadow-lg transition-all duration-200 hover:scale-105"
+              className="flex-1 bg-white text-gray-900 hover:bg-gray-100 font-semibold py-3 shadow-lg transition-all duration-200 hover:scale-105"
             >
               <Gift className="w-4 h-4 mr-2" />
               {notification.buttonText}
@@ -179,7 +179,7 @@ export default function NotificationPopup() {
             <Button
               onClick={handleClose}
               variant="outline"
-              className="flex-1 sm:flex-none sm:min-w-[100px] px-6 py-3 border-2 border-white text-white hover:bg-white hover:text-gray-900 rounded-xl font-semibold"
+              className="flex-1 sm:flex-none sm:min-w-[100px] px-6 py-3 border-2 border-white text-white hover:bg-white hover:text-gray-900 font-semibold"
             >
               Later
             </Button>

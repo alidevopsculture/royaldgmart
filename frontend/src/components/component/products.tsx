@@ -111,15 +111,32 @@ export function Products() {
   // ].
   useEffect(() => {
     const fetchProducts = async () => {
-      const res = await getProducts({ limit: 10, page: 1 });
-      // Filter out wholesale products from regular products
-      const regularProducts = res.products?.filter((product: any) => 
-        product.category !== 'WHOLESALE'
-      ) || [];
-      setAllProducts(regularProducts);
+      try {
+        const res = await getProducts({ limit: 100, page: 1 });
+        console.log('Fetched products:', res);
+        // Filter out wholesale products from regular products
+        const regularProducts = res.products?.filter((product: any) => 
+          product.category !== 'WHOLESALE'
+        ) || [];
+        setAllProducts(regularProducts);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        toast.error('Failed to load products');
+      }
     };
 
     fetchProducts();
+    
+    // Listen for product updates
+    const handleProductUpdate = () => {
+      fetchProducts();
+    };
+    
+    window.addEventListener('productUpdated', handleProductUpdate);
+    
+    return () => {
+      window.removeEventListener('productUpdated', handleProductUpdate);
+    };
   }, []);
   // console.log(allProducts);
 

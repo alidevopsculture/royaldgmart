@@ -41,7 +41,7 @@ import SizeAndColor from "../functional/SizeAndColor"
 import { productDataPosting } from "@/types/product"
 import { Slider } from "@/components/ui/slider"
 import toast, { Toaster } from "react-hot-toast"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu"
+
 import { useRouter } from "next/navigation"
 import { cleanDropdownText } from "@/lib/text-utils"
 
@@ -105,8 +105,8 @@ export function Createproduct() {
   
   const createNewProduct=async ()=>{
 
-    if(!otherData.name || !otherData.price || sizesAndColors.length === 0 || images.length === 0){
-      return toast.error('Please fill the required fields: Product Name, Price, Size, and at least one Image.', { duration: 5000 });
+    if(!otherData.name || !otherData.price || !otherData.category || sizesAndColors.length === 0 || images.length === 0){
+      return toast.error('Please fill all required fields: Product Name, Price, Category, Size & Color, and at least one Image.', { duration: 5000 });
     }
 
     // Validate numeric inputs before submission
@@ -124,7 +124,7 @@ export function Createproduct() {
             description: otherData.description || '',
             price: otherData.price,
             discountPercentage: otherData.productDiscount > 0 ? otherData.productDiscount : 0,
-            category: otherData.category || 'Uncategorized',
+            category: otherData.category,
             stockQuantity: otherData.stockQuantity || 0,
             availableSizesColors: JSON.stringify(sizesAndColors.map(item => ({
               ...item,
@@ -143,27 +143,15 @@ export function Createproduct() {
             formData.append('images[]', file, file.name);
           }
           
-          // Get token from cookie
-          const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
-          
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products`, {
-            method: 'POST',
-            credentials: 'include',
-            headers: {
-              'Authorization': `Bearer ${token}`
-            },
-            body: formData,
-          });
-          if (!response.ok) {
-            throw new Error('Failed to create product');
-          }
+          const result = await createProduct(formData);
           resolve('Product created successfully!');
-          // Redirect and refresh products list
+          // Trigger product list refresh
+          window.dispatchEvent(new Event('productUpdated'));
           router.push('/products');
           router.refresh();
         } catch (error) {
           console.error('Error creating product:', error);
-          reject('Failed to create product.');
+          reject(error instanceof Error ? error.message : 'Failed to create product.');
         } finally {
           setIsSubmiting(false);
         }
@@ -190,27 +178,19 @@ export function Createproduct() {
           </div>
 
           <div className="grid gap-2">
-          <Label htmlFor="description">Category</Label>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                {/* <ListOrderedIcon className="h-4 w-4 mr-2" /> */}
-                {otherData.category!='' ? cleanDropdownText(otherData.category): cleanDropdownText('Select Category')}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64">
-              <DropdownMenuLabel>{cleanDropdownText('Category')}</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuRadioGroup onValueChange={(e)=>setOtherData({...otherData,category:e})} >
-                {categories.map((item)=>{
-                  return(
-                    <DropdownMenuRadioItem key={item} value={item}>{cleanDropdownText(item)}</DropdownMenuRadioItem>
-                  )
-                })}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            <Label htmlFor="category">Category</Label>
+            <Select value={otherData.category} onValueChange={(value) => setOtherData({...otherData, category: value})}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select Category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {cleanDropdownText(item)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid grid-cols-2 gap-6">
