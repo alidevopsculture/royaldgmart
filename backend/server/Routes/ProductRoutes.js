@@ -244,7 +244,7 @@ router.get('/search', async (req, res) => {
     let filter = {};
 
     if (category) {
-      filter.category = category;
+      filter.category = { $regex: new RegExp(`^${category}$`, 'i') };
     }
 
     if (query) {
@@ -291,7 +291,7 @@ router.get('/'    ,    async (req, res) => {
     }
     
     if (category) {
-      query.category = category;
+      query.category = { $regex: new RegExp(`^${category}$`, 'i') };
     }
 
     const options = {
@@ -355,7 +355,7 @@ router.get('/category/:category' ,  async (req, res) => {
       const order = req.query.order === 'asc' ? 1 : -1;
       const subCategory = req.query.subCategory;
   
-      let query = { category: category };
+      let query = { category: { $regex: new RegExp(`^${category}$`, 'i') } };
   
      
       if (subCategory) {

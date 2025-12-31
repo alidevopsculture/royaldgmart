@@ -12,7 +12,7 @@ export default function Blankets() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products?category=blankets`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products?category=BLANKETS`);
         if (!response.ok) throw new Error('Failed to fetch products');
         const data = await response.json();
         setProducts(data.products || data || []);

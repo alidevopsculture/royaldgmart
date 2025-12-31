@@ -12,7 +12,7 @@ export default function WomenUnstitchedSuits() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products?category=women-unstiched-suits`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products?category=WOMEN UNSTICHED SUITS`);
         if (!response.ok) throw new Error('Failed to fetch products');
         const data = await response.json();
         setProducts(data.products || data || []);

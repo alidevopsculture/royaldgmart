@@ -56,7 +56,7 @@ export default function ProductCard({ product }: { product: any }) {
         {/* Cart Icon */}
         <button
           className="absolute top-3 right-3 z-10 text-white w-8 h-8 rounded-full flex items-center justify-center transition-colors"
-          style={{ backgroundColor: 'rgb(147, 61, 22)' }}
+          style={{ backgroundColor: 'rgba(241, 100, 34, 1)' }}
           onClick={async (e) => {
             e.stopPropagation();
             setIsAddingToCart(true);
@@ -158,8 +158,8 @@ export default function ProductCard({ product }: { product: any }) {
         
         {/* BUY NOW BUTTON */}
         <Button
-          className="w-full text-white font-semibold py-2 text-xs transition-colors rounded-none"
-          style={{ backgroundColor: 'rgb(147, 61, 22)' }}
+          className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold" 
+
           onClick={async (e) => {
             e.stopPropagation();
             

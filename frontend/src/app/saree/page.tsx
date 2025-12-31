@@ -12,7 +12,7 @@ export default function SareePage() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products?category=saree`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products?category=SAREE`);
         console.log(response);
         if (!response.ok) {
           throw new Error('Failed to fetch products');
