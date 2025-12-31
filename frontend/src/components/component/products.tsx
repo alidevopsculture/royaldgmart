@@ -47,7 +47,6 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { useRouter } from "next/navigation";
-import { getProducts } from "@/actions/product";
 import toast from "react-hot-toast";
 
 type Product = {
@@ -112,7 +111,18 @@ export function Products() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await getProducts({ limit: 100, page: 1 });
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products?limit=100&page=1`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch products: ${response.status}`);
+        }
+        
+        const res = await response.json();
         console.log('Fetched products:', res);
         // Filter out wholesale products from regular products
         const regularProducts = res.products?.filter((product: any) => 

@@ -304,8 +304,24 @@ export default function Checkout() {
     return subtotal;
   };
 
-  const calculateShipping = () => 50; // Fixed shipping cost
-  const calculateTax = (subtotal: number) => subtotal * 0.18; // 18% GST
+  const calculateShipping = () => {
+    if (!cart || !cart.products || cart.products.length === 0) return 0;
+    const firstProduct = cart.products[0]?.product;
+    console.log('First product for shipping:', firstProduct);
+    console.log('Shipping charges:', firstProduct?.shippingCharges);
+    // Use 0 if shippingCharges is explicitly set to 0, otherwise use 50 as fallback only if undefined
+    return firstProduct?.shippingCharges !== undefined ? firstProduct.shippingCharges : 50;
+  };
+  
+  const calculateTax = (subtotal: number) => {
+    if (!cart || !cart.products || cart.products.length === 0) return 0;
+    const firstProduct = cart.products[0]?.product;
+    console.log('First product for tax:', firstProduct);
+    console.log('Tax rate:', firstProduct?.taxRate);
+    // Use 0 if taxRate is explicitly set to 0, otherwise use 18 as fallback only if undefined
+    const taxRate = firstProduct?.taxRate !== undefined ? firstProduct.taxRate : 18;
+    return (subtotal * taxRate) / 100;
+  };
 
   const calculateTotal = () => {
     const subtotal = calculateSubtotal();
@@ -581,10 +597,10 @@ export default function Checkout() {
                   </div>
                   <div className="flex justify-between">
                     <span>Shipping</span>
-                    <span>₹{shipping.toFixed(2)}</span>
+                    <span>{shipping === 0 ? 'Free Shipping' : `₹${shipping.toFixed(2)}`}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>GST (18%)</span>
+                    <span>GST ({cart?.products?.[0]?.product?.taxRate !== undefined ? cart.products[0].product.taxRate : 18}%)</span>
                     <span>₹{tax.toFixed(2)}</span>
                   </div>
                   <Separator />

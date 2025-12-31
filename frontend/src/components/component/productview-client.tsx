@@ -163,6 +163,7 @@ export function ProductViewClient({ product, productId, user }: ProductViewClien
       
       <Button 
         size="lg" 
+        className="bg-orange-600 hover:bg-orange-700 text-white font-semibold"
         onClick={(e) => {
           e.preventDefault()
           handleAddToCart()

@@ -158,6 +158,21 @@ export default function CartPage() {
     return cartData.products.reduce((total: number, item: CartItem) => total + item.totalPrice, 0);
   };
 
+  const calculateShipping = () => {
+    if (!cartData?.products || cartData.products.length === 0) return 0;
+    const firstProduct = cartData.products[0]?.product;
+    // Use 0 if shippingCharges is explicitly set to 0, otherwise use 50 as fallback only if undefined
+    return firstProduct?.shippingCharges !== undefined ? firstProduct.shippingCharges : 50;
+  };
+  
+  const calculateTax = (subtotal: number) => {
+    if (!cartData?.products || cartData.products.length === 0) return 0;
+    const firstProduct = cartData.products[0]?.product;
+    // Use 0 if taxRate is explicitly set to 0, otherwise use 18 as fallback only if undefined
+    const taxRate = firstProduct?.taxRate !== undefined ? firstProduct.taxRate : 18;
+    return (subtotal * taxRate) / 100;
+  };
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -203,7 +218,7 @@ export default function CartPage() {
           <h2 className="text-2xl font-bold">Your Cart ({validCartItems.length} items)</h2>
           <button 
             onClick={() => window.location.reload()} 
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700"
           >
             Refresh Cart
           </button>
@@ -269,17 +284,21 @@ export default function CartPage() {
                   <span>₹{grandTotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>GST (18%)</span>
-                  <span>₹{(grandTotal * 0.18).toFixed(2)}</span>
+                  <span>Shipping</span>
+                  <span>{calculateShipping() === 0 ? 'Free Shipping' : `₹${calculateShipping().toFixed(2)}`}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>GST ({cartData?.products?.[0]?.product?.taxRate !== undefined ? cartData.products[0].product.taxRate : 18}%)</span>
+                  <span>₹{calculateTax(grandTotal).toFixed(2)}</span>
                 </div>
                 <div className="border-t pt-4 flex justify-between font-bold text-lg">
                   <span>Total</span>
-                  <span>₹{(grandTotal * 1.18).toFixed(2)}</span>
+                  <span>₹{(grandTotal + calculateShipping() + calculateTax(grandTotal)).toFixed(2)}</span>
                 </div>
               </CardContent>
               <CardFooter>
                 <Button 
-                  className="w-full" 
+                  className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold" 
                   size="lg"
                   onClick={handleProceedToCheckout}
                 >

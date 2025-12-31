@@ -139,6 +139,17 @@ export default async function Homepage({ user }: { user: any }) {
 
               )}
             </div>
+            
+            {/* Second row of products */}
+            {transformedProducts && transformedProducts.length > 4 && (
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8 mt-6 sm:mt-8">
+                {transformedProducts.slice(4, 8).map((product) => (
+                  <div key={product._id}>
+                    <ProductCard product={product} />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
