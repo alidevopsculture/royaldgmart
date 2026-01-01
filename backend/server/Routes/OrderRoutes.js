@@ -179,7 +179,25 @@ router.get('/track/:orderId', async (req, res) => {
   }
 });
 
-// Get user's order history
+// Get order status for payment polling
+router.get('/:orderId/status', auth, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const order = await Order.findById(orderId).select('paymentStatus status');
+    
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+    
+    res.json({ 
+      paymentStatus: order.paymentStatus,
+      orderStatus: order.status 
+    });
+  } catch (error) {
+    console.error('Error fetching order status:', error);
+    res.status(500).json({ message: 'Failed to fetch order status' });
+  }
+});
 router.get('/my-orders', auth, async (req, res) => {
   try {
     const userId = req.user.id;

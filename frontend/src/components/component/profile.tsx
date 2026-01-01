@@ -223,6 +223,7 @@ export function Profile() {
 
   const handleSave = async () => {
     try {
+      setLoading(true)
       const { updateProfile, getUserProfile } = await import('@/actions/profile')
       const result = await updateProfile({
         firstName: formData.firstName,
@@ -235,12 +236,18 @@ export function Profile() {
       })
       
       if (result && result.success) {
-        toast.success('Profile updated successfully!')
+        toast.success('✅ Profile updated successfully!')
         
         // Refresh user data after successful update
         const profileResult = await getUserProfile()
         if (profileResult.success && profileResult.user) {
           setUser(profileResult.user)
+        }
+        
+        // Clear any cached profile data for checkout sync
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('userProfileCache')
+          window.dispatchEvent(new CustomEvent('profileUpdated'))
         }
       } else {
         toast.error(result?.error || 'Failed to update profile')
@@ -248,6 +255,8 @@ export function Profile() {
     } catch (error) {
       console.error('Error updating profile:', error)
       toast.error('Error updating profile')
+    } finally {
+      setLoading(false)
     }
   }
 
