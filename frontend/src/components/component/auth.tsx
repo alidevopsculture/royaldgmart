@@ -19,6 +19,35 @@ export default function Auth() {
   const [resetOtpSent, setResetOtpSent] = useState(false)
   const [alertMessage, setAlertMessage] = useState('')
   const [showAlert, setShowAlert] = useState(false)
+  
+  // Persist forgot password state
+  useEffect(() => {
+    const savedState = localStorage.getItem('forgotPasswordState')
+    if (savedState) {
+      const { isForgotPassword: saved, resetOtpSent: savedOtp, email } = JSON.parse(savedState)
+      setIsForgotPassword(saved)
+      setResetOtpSent(savedOtp)
+      if (email) {
+        setTimeout(() => {
+          const emailInput = document.querySelector('input[name="email"]') as HTMLInputElement
+          if (emailInput) emailInput.value = email
+        }, 100)
+      }
+    }
+  }, [])
+  
+  useEffect(() => {
+    if (isForgotPassword || resetOtpSent) {
+      const email = (document.querySelector('input[name="email"]') as HTMLInputElement)?.value || ''
+      localStorage.setItem('forgotPasswordState', JSON.stringify({
+        isForgotPassword,
+        resetOtpSent,
+        email
+      }))
+    } else {
+      localStorage.removeItem('forgotPasswordState')
+    }
+  }, [isForgotPassword, resetOtpSent])
   const router = useRouter()
   const searchParams = useSearchParams()
   
@@ -52,6 +81,7 @@ export default function Auth() {
         const result = await resetPassword(email, otp, newPassword)
         if (result === 'Password reset successfully!') {
           toast.success('Password reset successfully!')
+          localStorage.removeItem('forgotPasswordState')
           setIsForgotPassword(false)
           setResetOtpSent(false)
         } else {
@@ -351,6 +381,7 @@ export default function Auth() {
                   type="button"
                   className="font-semibold text-white/90 hover:text-white transition-colors duration-200 text-xs sm:text-sm"
                   onClick={() => {
+                    localStorage.removeItem('forgotPasswordState')
                     setIsForgotPassword(false)
                     setResetOtpSent(false)
                   }}

@@ -63,6 +63,21 @@ export default function Checkout() {
   const router = useRouter();
 
   useEffect(() => {
+    // Load Razorpay script
+    const loadRazorpayScript = () => {
+      return new Promise((resolve) => {
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
+      });
+    };
+
+    loadRazorpayScript();
+  }, []);
+
+  useEffect(() => {
     const initializeCheckout = async () => {
       try {
         setLoading(true);
@@ -180,6 +195,11 @@ export default function Checkout() {
     try {
       setOrderLoading(true);
       
+      // Validate cart before proceeding
+      if (!cart || !cart.products || cart.products.length === 0) {
+        throw new Error('Cart is empty');
+      }
+      
       // First create the order in your database
       const { createOrder } = await import('@/actions/order');
       const orderResult = await createOrder(formData, 'razorpay', null);
@@ -188,7 +208,7 @@ export default function Checkout() {
         throw new Error('Failed to create order');
       }
 
-      // Create Razorpay order
+      // Create Razorpay order with proper error handling
       const razorpayOrder = await createRazorpayOrderClient(total);
       
       if (!razorpayOrder || !razorpayOrder.orderId) {
@@ -235,17 +255,25 @@ export default function Checkout() {
         },
         modal: {
           ondismiss: function() {
+            console.log('Payment modal dismissed');
             toast.error('Payment cancelled');
-          }
+          },
+          escape: false,
+          backdropclose: false
         }
       };
+
+      // Check if Razorpay is loaded
+      if (typeof (window as any).Razorpay === 'undefined') {
+        throw new Error('Razorpay SDK not loaded. Please refresh the page.');
+      }
 
       const razorpay = new (window as any).Razorpay(options);
       razorpay.open();
       
     } catch (error: any) {
       console.error('Razorpay payment error:', error);
-      toast.error(error.message || 'Payment failed');
+      toast.error(error.message || 'Payment failed. Please try again.');
     } finally {
       setOrderLoading(false);
     }

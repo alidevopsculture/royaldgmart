@@ -36,6 +36,8 @@ export default function CartPage() {
         
         let cart: Cart = await getAllCarts(cartIdentifier);
         console.log('Fetched cart:', cart);
+        console.log('Raw cart products:', cart?.products);
+        console.log('Cart products count:', cart?.products?.length || 0);
         
         // Filter out wholesale products from regular cart
         const regularCart = {
