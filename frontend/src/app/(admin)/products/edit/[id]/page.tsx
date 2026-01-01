@@ -11,6 +11,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Checkbox } from "@/components/ui/checkbox"
 import { Slider } from "@/components/ui/slider"
 import toast, { Toaster } from "react-hot-toast"
+import { X } from "lucide-react"
 import SizeSelection from "@/components/functional/SizeSelection"
 import ColorSelection from "@/components/functional/ColorSelection"
 import ImageContainer from "@/components/functional/ImageContainer"
@@ -53,6 +54,7 @@ export default function EditProduct() {
 
   const [product, setProduct] = useState<Product | null>(null)
   const [images, setImages] = useState<File[]>([])
+  const [existingImages, setExistingImages] = useState<string[]>([])
   const [selectedSizes, setSelectedSizes] = useState<string[]>([])
   const [selectedColors, setSelectedColors] = useState<ColorOption[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -80,6 +82,7 @@ export default function EditProduct() {
         if (!response.ok) throw new Error('Failed to fetch product')
         const data = await response.json()
         setProduct(data)
+        setExistingImages(data.images || [])
         
         // Extract sizes and colors from availableSizesColors
         if (data.availableSizesColors && data.availableSizesColors.length > 0) {
@@ -123,7 +126,7 @@ export default function EditProduct() {
       formData.append('data', JSON.stringify({
         ...product,
         availableSizesColors,
-        prevImgs: product.images
+        prevImgs: existingImages
       }))
       
       for (let file of images) {
@@ -373,14 +376,45 @@ export default function EditProduct() {
             </CardHeader>
             <CardContent>
               <div className="grid gap-4">
-                <div className="grid grid-cols-3 gap-2">
-                  {Array(6).fill(0).map((_, ind) => (
-                    <button key={ind} className="flex aspect-square w-full items-center justify-center rounded-md border border-dashed">
-                      <div className="w-full h-full">
-                        <ImageContainer ind={ind} setFiles={setImages} image={images[ind]} />
-                      </div>
-                    </button>
-                  ))}
+                {/* Existing Images */}
+                {existingImages.length > 0 && (
+                  <div className="mb-4">
+                    <Label className="text-sm font-medium mb-2 block">Current Images</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {existingImages.map((imageUrl, index) => (
+                        <div key={`existing-${index}`} className="relative aspect-square border rounded-md overflow-hidden">
+                          <img 
+                            src={imageUrl} 
+                            alt={`Product ${index + 1}`} 
+                            className="w-full h-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setExistingImages(prev => prev.filter((_, i) => i !== index))
+                            }}
+                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* New Images Upload */}
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Add New Images</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {Array(6).fill(0).map((_, ind) => (
+                      <button key={ind} className="flex aspect-square w-full items-center justify-center rounded-md border border-dashed">
+                        <div className="w-full h-full">
+                          <ImageContainer ind={ind} setFiles={setImages} image={images[ind]} />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </CardContent>

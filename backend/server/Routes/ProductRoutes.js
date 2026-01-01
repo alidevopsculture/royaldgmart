@@ -439,11 +439,23 @@ router.get('/category/:category' ,  async (req, res) => {
         });
         imageUrls = await Promise.all(uploadPromises);
         imageUrls = imageUrls.filter((item) => item !== null);
-        updateData.images = [...(updateData.prevImgs || []), ...imageUrls];
-        if(thumbnail){
-          updateData.thumbnail = thumbnail;
-        }
       }
+      
+      // Handle image updates properly
+      if (imageUrls.length > 0) {
+        // If new images are uploaded, combine with existing images from prevImgs
+        updateData.images = [...(updateData.prevImgs || []), ...imageUrls];
+      } else if (updateData.prevImgs) {
+        // If no new images but prevImgs exists, use prevImgs
+        updateData.images = updateData.prevImgs;
+      }
+      
+      if(thumbnail){
+        updateData.thumbnail = thumbnail;
+      }
+      
+      // Remove prevImgs from updateData as it's not needed in the database
+      delete updateData.prevImgs;
   
       const updatedProduct = await Product.findByIdAndUpdate(
         id,
