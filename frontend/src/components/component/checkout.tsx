@@ -63,14 +63,53 @@ export default function Checkout() {
   const router = useRouter();
 
   useEffect(() => {
-    // Load Razorpay script
+    // Load Razorpay script with better mobile support
     const loadRazorpayScript = () => {
       return new Promise((resolve) => {
+        if (typeof (window as any).Razorpay !== 'undefined') {
+          resolve(true);
+          return;
+        }
+        
         const script = document.createElement('script');
         script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-        script.onload = () => resolve(true);
-        script.onerror = () => resolve(false);
-        document.body.appendChild(script);
+        script.async = true;
+        script.crossOrigin = 'anonymous';
+        
+        let loaded = false;
+        const cleanup = () => {
+          script.onload = null;
+          script.onerror = null;
+        };
+        
+        script.onload = () => {
+          if (!loaded) {
+            loaded = true;
+            cleanup();
+            console.log('Razorpay SDK loaded');
+            resolve(true);
+          }
+        };
+        
+        script.onerror = () => {
+          if (!loaded) {
+            loaded = true;
+            cleanup();
+            console.error('Razorpay SDK failed to load');
+            resolve(false);
+          }
+        };
+        
+        // Timeout fallback
+        setTimeout(() => {
+          if (!loaded) {
+            loaded = true;
+            cleanup();
+            resolve(false);
+          }
+        }, 10000);
+        
+        document.head.appendChild(script);
       });
     };
 
@@ -181,7 +220,18 @@ export default function Checkout() {
       }
     };
 
+    // Listen for profile updates
+    const handleProfileUpdate = () => {
+      console.log('Profile updated, refreshing checkout data');
+      initializeCheckout();
+    };
+    
+    window.addEventListener('profileUpdated', handleProfileUpdate);
     initializeCheckout();
+    
+    return () => {
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
+    };
   }, [router]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -255,21 +305,74 @@ export default function Checkout() {
         },
         modal: {
           ondismiss: function() {
+            if (pollInterval) clearInterval(pollInterval);
             console.log('Payment modal dismissed');
             toast.error('Payment cancelled');
           },
           escape: false,
-          backdropclose: false
-        }
+          backdropclose: false,
+          confirm_close: true
+        },
+        retry: {
+          enabled: true,
+          max_count: 3
+        },
+        timeout: 300
       };
 
-      // Check if Razorpay is loaded
-      if (typeof (window as any).Razorpay === 'undefined') {
-        throw new Error('Razorpay SDK not loaded. Please refresh the page.');
-      }
-
-      const razorpay = new (window as any).Razorpay(options);
-      razorpay.open();
+      // Better Razorpay loading check with fallback
+      let pollInterval: NodeJS.Timeout;
+      
+      const initRazorpay = () => {
+        if (typeof (window as any).Razorpay === 'undefined') {
+          toast.error('Payment service unavailable. Please use Cash on Delivery or try again later.');
+          setPaymentMethod('cod');
+          return;
+        }
+        
+        try {
+          const razorpay = new (window as any).Razorpay(options);
+          
+          razorpay.on('payment.failed', function (response: any) {
+            if (pollInterval) clearInterval(pollInterval);
+            console.error('Payment failed:', response.error);
+            toast.error('Payment failed. Please try again or use Cash on Delivery.');
+          });
+          
+          // Start polling when modal opens
+          razorpay.on('payment.submit', function() {
+            pollInterval = setInterval(async () => {
+              try {
+                const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
+                const statusResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${orderResult.orderId}/status`, {
+                  headers: { 'Authorization': `Bearer ${token}` },
+                  credentials: 'include'
+                });
+                
+                if (statusResponse.ok) {
+                  const statusData = await statusResponse.json();
+                  if (statusData.paymentStatus === 'completed') {
+                    clearInterval(pollInterval);
+                    razorpay.close();
+                    toast.success('Payment successful!');
+                    router.push(`/order-confirmation?orderId=${orderResult.orderId}&total=${total.toFixed(2)}`);
+                  }
+                }
+              } catch (error) {
+                console.error('Status polling error:', error);
+              }
+            }, 3000);
+          });
+          
+          razorpay.open();
+        } catch (error) {
+          console.error('Razorpay initialization error:', error);
+          toast.error('Payment service error. Please use Cash on Delivery.');
+          setPaymentMethod('cod');
+        }
+      };
+      
+      initRazorpay();
       
     } catch (error: any) {
       console.error('Razorpay payment error:', error);
