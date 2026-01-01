@@ -156,7 +156,7 @@ export default function Navbar() {
     if (category === "WHOLESALE") {
       return (
         <Link key={category} href="/wholesale" prefetch={false}
-          className="mx-1 px-3 py-1 rounded-lg bg-amber-600 text-white font-bold"
+          className="mx-1 px-3 py-1 rounded-lg bg-orange-600 text-white font-bold"
         >
           {category}
         </Link>

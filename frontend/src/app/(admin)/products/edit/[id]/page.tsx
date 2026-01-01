@@ -351,8 +351,11 @@ export default function EditProduct() {
               <div className="grid gap-2">
                 <Label htmlFor="shipping-charges">Shipping Charges (₹)</Label>
                 <Input 
-                  value={product.shippingCharges || 50} 
-                  onChange={(e)=>setProduct({...product, shippingCharges: parseFloat(e.target.value) || 0})} 
+                  value={product.shippingCharges !== undefined ? product.shippingCharges : 50} 
+                  onChange={(e)=>{
+                    const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                    setProduct({...product, shippingCharges: isNaN(value) ? 0 : value});
+                  }} 
                   id="shipping-charges" 
                   type="number" 
                   placeholder="50" 
@@ -369,8 +372,8 @@ export default function EditProduct() {
                   <div>Discount ({product.discountPercentage}%): -₹{((product.price * product.discountPercentage) / 100).toFixed(2)}</div>
                 )}
                 <div>Tax ({product.taxRate || 18}%): +₹{((product.price * (100 - product.discountPercentage) / 100) * (product.taxRate || 18) / 100).toFixed(2)}</div>
-                <div>Shipping: +₹{product.shippingCharges || 50}</div>
-                <div className="font-semibold border-t pt-1 text-lg text-green-600">Total Amount: ₹{(product.price * (100 - product.discountPercentage) / 100 * (100 + (product.taxRate || 18)) / 100 + (product.shippingCharges || 50)).toFixed(2)}</div>
+                <div>Shipping: +₹{product.shippingCharges !== undefined ? product.shippingCharges : 50}</div>
+                <div className="font-semibold border-t pt-1 text-lg text-green-600">Total Amount: ₹{(product.price * (100 - product.discountPercentage) / 100 * (100 + (product.taxRate || 18)) / 100 + (product.shippingCharges !== undefined ? product.shippingCharges : 50)).toFixed(2)}</div>
               </div>
             </div>
           </div>
