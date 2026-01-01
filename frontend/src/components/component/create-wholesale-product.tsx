@@ -37,13 +37,19 @@ import { Inputfile } from "./inputfile"
 import Image from "next/image"
 import ImageContainer from "../functional/ImageContainer"
 import { createProduct } from "@/actions/product"
-import SizeAndColor from "../functional/SizeAndColor"
+import SizeSelection from "../functional/SizeSelection"
+import ColorSelection from "../functional/ColorSelection"
 import { productDataPosting } from "@/types/product"
 import { Slider } from "@/components/ui/slider"
 import toast, { Toaster } from "react-hot-toast"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu"
 import { useRouter } from "next/navigation"
 
+
+interface ColorOption {
+  color: string
+  combination_price: number
+}
 
 export type SizersAndColorsType ={
   size:string,
@@ -65,7 +71,6 @@ export type OtherDataType={
 }
 
 export function CreateWholesaleProduct() {
-  const [sizesAndColors,setSizesAndColors]=useState<SizersAndColorsType[]>([])
   const [images,setImages]=useState<File[]>([])
   const [otherData,setOtherData]=useState<OtherDataType>({
     name: '',
@@ -85,7 +90,8 @@ export function CreateWholesaleProduct() {
       careInstruction: '',
     },
   })
-  const [selectedSizes,setSelectedSizes]=useState<Array<string>>([])
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([])
+  const [selectedColors, setSelectedColors] = useState<ColorOption[]>([])
   const [isSubmiting,setIsSubmiting]=useState(false)
   const router = useRouter();
 
@@ -106,8 +112,8 @@ export function CreateWholesaleProduct() {
   
   const createNewProduct=async ()=>{
 
-    if(!otherData.name || !otherData.price || sizesAndColors.length === 0 || images.length === 0){
-      return toast.error('Please fill the required fields: Product Name, Price, Size, and at least one Image.', { duration: 5000 });
+    if(!otherData.name || !otherData.price || images.length === 0){
+      return toast.error('Please fill the required fields: Product Name, Price, and at least one Image.', { duration: 5000 });
     }
 
     // Validate numeric inputs before submission
@@ -120,6 +126,19 @@ export function CreateWholesaleProduct() {
       new Promise(async (resolve, reject) => {
         setIsSubmiting(true);
         try {
+          // Create availableSizesColors from separate size and color selections
+          const availableSizesColors = selectedSizes.length > 0 
+            ? selectedSizes.map(size => ({
+                size,
+                colors: selectedColors,
+                stockQuantity: otherData.stockQuantity || 0
+              }))
+            : [{
+                size: 'One Size',
+                colors: selectedColors,
+                stockQuantity: otherData.stockQuantity || 0
+              }]
+
           const data: productDataPosting = {
             name: otherData.name,
             description: otherData.description || '',
@@ -127,10 +146,7 @@ export function CreateWholesaleProduct() {
             discountPercentage: 0, // No product discount for wholesale
             category: 'WHOLESALE', // Force wholesale category
             stockQuantity: otherData.stockQuantity || 0,
-            availableSizesColors: JSON.stringify(sizesAndColors.map(item => ({
-              ...item,
-              stockQuantity: Math.max(0, item.stockQuantity || otherData.stockQuantity || 0)
-            }))),
+            availableSizesColors: JSON.stringify(availableSizesColors),
             isAvailable: true,
             product_specification: otherData.product_specification || {},
             carousel: otherData.carousel || false,
@@ -225,11 +241,22 @@ export function CreateWholesaleProduct() {
               
             </div>
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="size">Available Size and color *</Label>
-            <SizeAndColor 
-            setSizesAndColors={setSizesAndColors} sizesAndColors={sizesAndColors}
-            selectedSizes={selectedSizes} setSelectedSizes={setSelectedSizes}/>
+          <div className="grid gap-4">
+            <div className="grid gap-2">
+              <Label>Available Sizes (Optional)</Label>
+              <SizeSelection 
+                selectedSizes={selectedSizes} 
+                setSelectedSizes={setSelectedSizes}
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label>Available Colors (Optional)</Label>
+              <ColorSelection 
+                selectedColors={selectedColors} 
+                setSelectedColors={setSelectedColors}
+              />
+            </div>
           </div>
           
           {/* Marketing Options */}

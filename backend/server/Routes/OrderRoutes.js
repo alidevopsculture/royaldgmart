@@ -125,8 +125,7 @@ router.post('/create', auth, upload.single('paymentScreenshot'), async (req, res
     await order.save();
     console.log('Order created with ID:', order._id, 'for user:', order.user);
 
-    // Clear user's cart
-    await Cart.findOneAndDelete({ user: userId });
+    // Cart is preserved - user must manually remove items
 
     // Send order confirmation email to logged-in user
     try {
