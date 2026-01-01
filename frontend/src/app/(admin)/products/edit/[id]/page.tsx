@@ -16,6 +16,7 @@ import SizeSelection from "@/components/functional/SizeSelection"
 import ColorSelection from "@/components/functional/ColorSelection"
 import ImageContainer from "@/components/functional/ImageContainer"
 import { cleanDropdownText } from "@/lib/text-utils"
+import { getAuthToken, makeAuthenticatedRequest } from "@/lib/auth-utils"
 
 interface ColorOption {
   color: string
@@ -78,7 +79,8 @@ export default function EditProduct() {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products/${productId}`)
+        const response = await makeAuthenticatedRequest(`${process.env.NEXT_PUBLIC_API_URL}/api/products/${productId}`);
+        
         if (!response.ok) throw new Error('Failed to fetch product')
         const data = await response.json()
         setProduct(data)
@@ -133,19 +135,29 @@ export default function EditProduct() {
         formData.append('images[]', file, file.name)
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products/update/${productId}`, {
+      // Get token from cookies for authentication
+      const token = getAuthToken();
+
+      if (!token) {
+        toast.error('Authentication required. Please login again.')
+        return
+      }
+
+      const response = await makeAuthenticatedRequest(`${process.env.NEXT_PUBLIC_API_URL}/api/products/update/${productId}`, {
         method: 'PUT',
-        credentials: 'include',
         body: formData,
       })
 
-      if (!response.ok) throw new Error('Failed to update product')
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to update product')
+      }
       
       toast.success('Product updated successfully!')
       router.push('/products')
     } catch (error) {
       console.error('Error updating product:', error)
-      toast.error('Failed to update product')
+      toast.error(error instanceof Error ? error.message : 'Failed to update product')
     } finally {
       setIsSubmitting(false)
     }
