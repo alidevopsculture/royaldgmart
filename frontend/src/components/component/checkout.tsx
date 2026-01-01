@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingBag, User, CreditCard, MapPin, Phone, Mail, Truck, Banknote, AlertCircle } from 'lucide-react';
+import { ShoppingBag, User, CreditCard, MapPin, Phone, Mail, Truck, Banknote, AlertCircle, X } from 'lucide-react';
 import { getUserData } from '@/actions/auth';
 import { getAllCarts, transferGuestCartToUser } from '@/actions/cart';
 import { createRazorpayOrderClient, verifyRazorpayPaymentClient } from '@/actions/payment-client';
@@ -138,8 +138,7 @@ export default function Checkout() {
         }
         
         setUser(fullUserData);
-        setFormData(prev => ({
-          ...prev,
+        setFormData({
           firstName: fullUserData.firstName || '',
           lastName: fullUserData.lastName || '',
           email: fullUserData.email || '',
@@ -149,7 +148,7 @@ export default function Checkout() {
           state: fullUserData.state || '',
           zipCode: fullUserData.zipCode || '',
           country: fullUserData.country || 'India'
-        }));
+        });
         
         const guestSessionId = getCurrentGuestSession();
         if (guestSessionId) {
@@ -233,6 +232,41 @@ export default function Checkout() {
       window.removeEventListener('profileUpdated', handleProfileUpdate);
     };
   }, [router]);
+
+  const handleRemoveItem = async (productId: string) => {
+    try {
+      const { removeFromCart } = await import('@/actions/cart');
+      
+      const result = await removeFromCart({
+        userId: user?.id,
+        sessionId: !user?.id ? await getCartIdentifier(user).then(ci => ci.sessionId) : undefined,
+        productId
+      });
+      
+      if (result.success) {
+        // Refresh cart data immediately
+        const cartIdentifier = await getCartIdentifier(user);
+        const updatedCartData = await getAllCarts(cartIdentifier);
+        const regularProducts = updatedCartData.products.filter((item: any) => 
+          item.product && item.product.category !== 'WHOLESALE'
+        );
+        
+        if (regularProducts.length === 0) {
+          toast.success('Item removed from cart');
+          router.push('/cart');
+          return;
+        }
+        
+        setCart({ ...updatedCartData, products: regularProducts });
+        toast.success('Item removed from cart');
+      } else {
+        toast.error('Failed to remove item');
+      }
+    } catch (error) {
+      console.error('Remove item error:', error);
+      toast.error('Error removing item');
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({
@@ -495,12 +529,12 @@ export default function Checkout() {
           <div className="lg:col-span-2 space-y-6">
             {/* Shipping Information */}
             <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-t-lg">
+              <CardHeader className="bg-orange-600 text-white rounded-t-lg">
                 <CardTitle className="flex items-center gap-2">
                   <Truck className="h-5 w-5" />
                   Shipping Information
                 </CardTitle>
-                <CardDescription className="text-indigo-100">
+                <CardDescription className="text-orange-100">
                   Where should we deliver your order?
                 </CardDescription>
               </CardHeader>
@@ -602,12 +636,12 @@ export default function Checkout() {
 
             {/* Payment Method */}
             <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-t-lg">
+              <CardHeader className="bg-orange-600 text-white rounded-t-lg">
                 <CardTitle className="flex items-center gap-2">
                   <CreditCard className="h-5 w-5" />
                   Payment Method
                 </CardTitle>
-                <CardDescription className="text-green-100">
+                <CardDescription className="text-orange-100">
                   Choose your preferred payment option
                 </CardDescription>
               </CardHeader>
@@ -676,19 +710,19 @@ export default function Checkout() {
           {/* Order Summary */}
           <div>
             <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm sticky top-4">
-              <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-t-lg">
+              <CardHeader className="bg-orange-600 text-white rounded-t-lg">
                 <CardTitle className="flex items-center gap-2">
                   <ShoppingBag className="h-5 w-5" />
                   Order Summary
                 </CardTitle>
-                <CardDescription className="text-purple-100">
+                <CardDescription className="text-orange-100">
                   {cart?.products.length} item(s)
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-6">
                 <div className="space-y-4 max-h-64 overflow-y-auto">
-                  {cart?.products.filter(item => item.product).map((item) => (
-                    <div key={`${item._id}-${item.size}`} className="flex items-center space-x-3">
+                  {cart?.products.filter(item => item.product).map((item, index) => (
+                    <div key={`${item._id}-${item.size || 'no-size'}-${index}`} className="flex items-center space-x-3">
                       <div className="relative w-12 h-12 bg-gray-200 rounded-md overflow-hidden flex-shrink-0">
                         {item.product?.images?.[0] && (
                           <Image
@@ -714,8 +748,10 @@ export default function Checkout() {
                           )}
                         </div>
                       </div>
-                      <div className="text-sm font-medium text-gray-900">
-                        ₹{item.totalPrice.toFixed(2)}
+                      <div className="flex items-center gap-2">
+                        <div className="text-sm font-medium text-gray-900">
+                          ₹{item.totalPrice.toFixed(2)}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -747,7 +783,7 @@ export default function Checkout() {
                 <Button 
                   onClick={handlePlaceOrder}
                   disabled={orderLoading || !cart || cart.products.length === 0}
-                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {orderLoading ? (
                     <div className="flex items-center gap-2">

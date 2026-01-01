@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getAllCarts, removeFromCart } from "@/actions/cart"
+import { getAllCarts, removeFromCart, updateCartItem } from "@/actions/cart"
 import { getUserData } from "@/actions/auth"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -82,6 +82,35 @@ export default function CartPage() {
 
     fetchData();
   }, []);
+
+  const handleUpdateQuantity = async (productId: string, newQuantity: number) => {
+    if (newQuantity < 1) return;
+    
+    try {
+      const cartIdentifier = await getCartIdentifier(user);
+      const result = await updateCartItem({ ...cartIdentifier, productId, quantity: newQuantity });
+      
+      if (result.success) {
+        // Update cart data after quantity change
+        const updatedCart = await getAllCarts(cartIdentifier);
+        const regularCart = {
+          ...updatedCart,
+          products: updatedCart.products?.filter((item: any) => 
+            item.product && item.product.category !== 'WHOLESALE'
+          ) || []
+        };
+        setCartData(regularCart);
+        
+        // Dispatch a custom event to notify navbar to update cart count
+        window.dispatchEvent(new CustomEvent('cartUpdated'));
+      } else {
+        toast.error(result.error || "Failed to update quantity");
+      }
+    } catch (error) {
+      console.error("Error updating quantity:", error);
+      toast.error("Failed to update quantity");
+    }
+  };
 
   const handleRemoveItem = async (productId: string) => {
     try {
@@ -230,8 +259,8 @@ export default function CartPage() {
           {/* Cart Items */}
           <div className="lg:col-span-2">
             <div className="space-y-6">
-              {validCartItems.map((item: CartItem) => (
-                <Card key={`${item.product._id}-${item.size}`} className="overflow-hidden">
+              {validCartItems.map((item: CartItem, index: number) => (
+                <Card key={`${item.product._id}-${item.size || 'no-size'}-${index}`} className="overflow-hidden">
                   <CardContent className="p-6">
                     <div className="flex flex-col sm:flex-row gap-4">
                       <div className="flex-shrink-0 mx-auto sm:mx-0">
@@ -254,7 +283,32 @@ export default function CartPage() {
                           <p className="text-sm text-muted-foreground mt-1">Size: {item.size}</p>
                         )}
                         <p className="text-base sm:text-lg font-bold mt-2">₹{item.purchasePrice.toFixed(2)}</p>
-                        <p className="text-sm text-muted-foreground mt-1">Quantity: {item.quantity}</p>
+                        
+                        {/* Quantity Controls */}
+                        <div className="flex items-center gap-3 mt-3">
+                          <span className="text-sm text-muted-foreground">Quantity:</span>
+                          <div className="flex items-center gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleUpdateQuantity(item.product._id, item.quantity - 1)}
+                              disabled={item.quantity <= 1}
+                              className="h-8 w-8 p-0"
+                            >
+                              -
+                            </Button>
+                            <span className="min-w-[2rem] text-center font-medium">{item.quantity}</span>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleUpdateQuantity(item.product._id, item.quantity + 1)}
+                              className="h-8 w-8 p-0"
+                            >
+                              +
+                            </Button>
+                          </div>
+                        </div>
+                        
                         <p className="text-base sm:text-lg font-bold mt-2">Total: ₹{item.totalPrice.toFixed(2)}</p>
                       </div>
                       
@@ -281,6 +335,39 @@ export default function CartPage() {
                 <CardTitle>Order Summary</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Items in Order Summary */}
+                <div className="space-y-3 border-b pb-4">
+                  {validCartItems.map((item: CartItem, index: number) => (
+                    <div key={`summary-${item.product._id}-${index}`} className="flex justify-between items-center text-sm">
+                      <div className="flex-1">
+                        <p className="font-medium truncate">{item.product.name}</p>
+                        {item.size && <p className="text-xs text-muted-foreground">Size: {item.size}</p>}
+                      </div>
+                      <div className="flex items-center gap-2 ml-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleUpdateQuantity(item.product._id, item.quantity - 1)}
+                          disabled={item.quantity <= 1}
+                          className="h-6 w-6 p-0 text-xs"
+                        >
+                          -
+                        </Button>
+                        <span className="min-w-[1.5rem] text-center text-xs">{item.quantity}</span>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleUpdateQuantity(item.product._id, item.quantity + 1)}
+                          className="h-6 w-6 p-0 text-xs"
+                        >
+                          +
+                        </Button>
+                        <span className="min-w-[4rem] text-right">₹{item.totalPrice.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
                 <div className="flex justify-between">
                   <span>Subtotal</span>
                   <span>₹{grandTotal.toFixed(2)}</span>

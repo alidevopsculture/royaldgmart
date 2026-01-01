@@ -332,7 +332,7 @@ export function Profile() {
         {/* Quick Actions */}
         <div className="mb-8">
           <Link href="/my-orders">
-            <Button className="bg-indigo-600 hover:bg-indigo-700 text-white">
+            <Button className="bg-orange-600 hover:bg-orange-700 text-white">
               <Package className="w-4 h-4 mr-2" />
               My Orders
             </Button>
@@ -475,7 +475,7 @@ export function Profile() {
               </Button>
               <Button 
                 onClick={handleSave}
-                className="px-8 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+                className="px-8 py-2 bg-orange-600 hover:bg-orange-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
               >
                 Save Changes
               </Button>
