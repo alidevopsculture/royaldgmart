@@ -362,14 +362,13 @@ export function Orders() {
                         <TableCell className="hidden md:table-cell">
                           <button 
                             onClick={() => {
-                              const productLinks = order.products.map((item: any) => 
-                                `https://royaldgmart.com/product-view/${item.product?._id}`
-                              ).join('\n');
+                              // Get current domain dynamically
+                              const currentDomain = window.location.origin;
                               
                               // Open each product in a new tab
                               order.products.forEach((item: any) => {
                                 if (item.product?._id) {
-                                  window.open(`https://royaldgmart.com/product-view/${item.product._id}`, '_blank');
+                                  window.open(`${currentDomain}/product-view/${item.product._id}`, '_blank');
                                 }
                               });
                             }}

@@ -1,5 +1,4 @@
 import { getUserData } from "@/actions/auth"
-import { redirect } from "next/navigation"
 import { ReactNode } from "react"
 
 interface layoutProps{
@@ -7,12 +6,7 @@ interface layoutProps{
 }
 
 export default async function layout({children}:layoutProps ){
-    const user = await getUserData();
-    
-    if (user && user.role === 'admin') {
-        redirect('/dashboard');
-    }
-
+    // Allow both admin and regular users to access customer pages
     return (
         <div className='overflow-hidden'>
             {children}
