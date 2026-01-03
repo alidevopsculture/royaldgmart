@@ -63,12 +63,10 @@ export default function Curtains() {
           </ol>
         </nav>
         <section id="products">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
             {products && products.length > 0 ? (
               products.map((product) => (
-                <div key={product._id} className="flex justify-center">
-                  <ProductCard product={product} />
-                </div>
+                <ProductCard key={product._id} product={product} />
               ))
             ) : (
               <div className="col-span-full text-center py-12">

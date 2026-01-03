@@ -93,7 +93,7 @@ export default function SareePage() {
 
         {/* Product Grid */}
         <section id="products">
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
             {products && products.length > 0 ? (
               products.map((product) => (
                 <ProductCard key={product._id} product={product} />

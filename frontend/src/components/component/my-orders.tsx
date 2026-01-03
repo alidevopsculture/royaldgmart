@@ -226,9 +226,13 @@ export function MyOrders() {
       if (deleteSync) {
         const { orderId, type, action } = JSON.parse(deleteSync)
         if (type === 'regular' && action === 'delete') {
-          setOrders(prev => prev.filter(order => order._id !== orderId))
+          setOrders(prev => {
+            const filtered = prev.filter(order => order._id !== orderId)
+            // Update localStorage with filtered orders
+            localStorage.setItem('userOrders', JSON.stringify(filtered))
+            return filtered
+          })
           localStorage.removeItem('adminDeleteSync')
-          localStorage.removeItem('userOrders')
           toast.success('Order deleted by admin')
         }
       }
@@ -444,22 +448,22 @@ export function MyOrders() {
                           />
                         )}
                         
-                        {(order.status === 'delivered' || order.status === 'shipped') && (
+                        {(order.status === 'delivered' || order.status === 'shipped' || order.status === 'confirmed') && (
                           <ReturnOrderDialog 
                             orderId={order._id} 
                             orderType="regular" 
                             onSuccess={() => {}}
                             onLocalUpdate={(id, status, reason) => {
-                              const newUpdates = { ...orderUpdates, [id]: { status, reason } }
+                              const newUpdates = { ...orderUpdates, [id]: { status: 'return_initiated', reason } }
                               setOrderUpdates(newUpdates)
                               localStorage.setItem('orderUpdates', JSON.stringify(newUpdates))
                               
                               setOrders(prev => {
                                 const updated = prev.map(o => 
-                                  o._id === id ? { ...o, status, returnReason: reason } : o
+                                  o._id === id ? { ...o, status: 'return_initiated', returnReason: reason } : o
                                 )
                                 localStorage.setItem('userOrders', JSON.stringify(updated))
-                                localStorage.setItem('adminOrdersSync', JSON.stringify({ timestamp: Date.now(), orderId: id, status, reason, type: 'regular' }))
+                                localStorage.setItem('adminOrdersSync', JSON.stringify({ timestamp: Date.now(), orderId: id, status: 'return_initiated', reason, type: 'regular' }))
                                 return updated
                               })
                               
@@ -468,6 +472,11 @@ export function MyOrders() {
                                 headers: { 'Content-Type': 'application/json' },
                                 credentials: 'include',
                                 body: JSON.stringify({ returnReason: reason })
+                              }).then(response => {
+                                if (response.ok) {
+                                  // Force refresh of returns page
+                                  window.dispatchEvent(new CustomEvent('returnRequestSubmitted', { detail: { orderId: id } }))
+                                }
                               }).catch(() => console.log('Backend sync failed'))
                             }}
                           />

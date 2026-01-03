@@ -174,6 +174,10 @@ export function Products() {
   };
 
 const handleDelete = async (productId: string) => {
+  if (!confirm('Are you sure you want to delete this product?')) {
+    return;
+  }
+  
   try {
     // Get token from cookie
     const token = document.cookie
@@ -194,6 +198,9 @@ const handleDelete = async (productId: string) => {
 
     setAllProducts((prev) => prev.filter((p) => p._id !== productId));
     toast.success("Product deleted successfully!");
+    
+    // Dispatch event to notify other components
+    window.dispatchEvent(new CustomEvent('productUpdated'));
   } catch (error) {
     console.error("Error deleting product:", error);
     toast.error("Failed to delete product.");
