@@ -309,7 +309,7 @@ export default function CartPage() {
                           </div>
                         </div>
                         
-                        <p className="text-base sm:text-lg font-bold mt-2">Total: ₹{item.totalPrice.toFixed(2)}</p>
+                        <p className="text-base sm:text-lg font-bold mt-2">Total: ₹{(item.purchasePrice * item.quantity).toFixed(2)}</p>
                       </div>
                       
                       <div className="flex-shrink-0 w-full sm:w-auto">
@@ -338,31 +338,13 @@ export default function CartPage() {
                 {/* Items in Order Summary */}
                 <div className="space-y-3 border-b pb-4">
                   {validCartItems.map((item: CartItem, index: number) => (
-                    <div key={`summary-${item.product._id}-${index}`} className="flex justify-between items-center text-sm">
-                      <div className="flex-1">
-                        <p className="font-medium truncate">{item.product.name}</p>
+                    <div key={`summary-${item.product._id}-${index}`} className="flex justify-between items-start text-sm">
+                      <div className="flex-1 pr-2">
+                        <p className="font-medium leading-tight">{item.product.name}</p>
                         {item.size && <p className="text-xs text-muted-foreground">Size: {item.size}</p>}
                       </div>
-                      <div className="flex items-center gap-2 ml-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => handleUpdateQuantity(item.product._id, item.quantity - 1)}
-                          disabled={item.quantity <= 1}
-                          className="h-6 w-6 p-0 text-xs"
-                        >
-                          -
-                        </Button>
-                        <span className="min-w-[1.5rem] text-center text-xs">{item.quantity}</span>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => handleUpdateQuantity(item.product._id, item.quantity + 1)}
-                          className="h-6 w-6 p-0 text-xs"
-                        >
-                          +
-                        </Button>
-                        <span className="min-w-[4rem] text-right">₹{item.totalPrice.toFixed(2)}</span>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="min-w-[4rem] text-right font-medium">₹{item.totalPrice.toFixed(2)}</span>
                       </div>
                     </div>
                   ))}
@@ -377,7 +359,7 @@ export default function CartPage() {
                   <span>{calculateShipping() === 0 ? 'Free Shipping' : `₹${calculateShipping().toFixed(2)}`}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>GST ({cartData?.products?.[0]?.product?.taxRate !== undefined ? cartData.products[0].product.taxRate : 18}%)</span>
+                  <span>GST (5%)</span>
                   <span>₹{calculateTax(grandTotal).toFixed(2)}</span>
                 </div>
                 <div className="border-t pt-4 flex justify-between font-bold text-lg">

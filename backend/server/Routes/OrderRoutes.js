@@ -6,7 +6,7 @@ const Order = require('../Models/OrdersSchema');
 const Cart = require('../Models/CartSchema');
 const GuestCart = require('../Models/GuestCartSchema');
 const { authenticateToken: auth } = require('../MiddleWare/auth');
-const { sendOrderConfirmation } = require('../utility/emailService');
+const { sendOrderConfirmation, sendOrderStatusUpdate, sendAdminOrderNotification } = require('../utility/emailService');
 const router = express.Router();
 
 // Configure multer for file uploads
@@ -125,22 +125,32 @@ router.post('/create', auth, upload.single('paymentScreenshot'), async (req, res
     await order.save();
     console.log('Order created with ID:', order._id, 'for user:', order.user);
 
-    // Cart is preserved - user must manually remove items
-
-    // Send order confirmation email to logged-in user
+    // Send admin notification email
     try {
-      const userEmail = req.user.email;
-      console.log('Sending confirmation email to:', userEmail);
-      await sendOrderConfirmation(userEmail, {
+      const customerName = `${shippingDetails.firstName} ${shippingDetails.lastName}`;
+      const shippingAddress = `${shippingDetails.address}, ${shippingDetails.city}, ${shippingDetails.state} ${shippingDetails.zipCode}, ${shippingDetails.country}`;
+      
+      console.log('Sending admin notification for order:', order._id);
+      
+      await sendAdminOrderNotification({
         orderId: order._id,
+        customerName: customerName,
+        customerEmail: shippingDetails.email,
+        customerPhone: shippingDetails.phone,
         total: order.total,
-        paymentMethod: order.paymentMethod
+        paymentMethod: order.paymentMethod,
+        products: validProducts,
+        shippingAddress: shippingAddress
       });
-      console.log('Confirmation email sent successfully');
+      
+      console.log('Admin notification sent successfully for order:', order._id);
     } catch (emailError) {
-      console.error('Failed to send confirmation email:', emailError);
+      console.error('Failed to send admin notification:', emailError);
       // Don't fail the order if email fails
     }
+
+    // Cart is preserved - user must manually remove items
+    // Note: Order confirmation email will be sent when admin confirms the order
 
     res.status(201).json({ 
       success: true,
@@ -281,6 +291,34 @@ router.put('/admin/:orderId/status', auth, async (req, res) => {
       return res.status(404).json({ message: 'Order not found' });
     }
 
+    // Send email notification to customer
+    try {
+      const customerEmail = order.shippingDetails.email;
+      const customerName = `${order.shippingDetails.firstName} ${order.shippingDetails.lastName}`;
+      
+      if (status === 'confirmed') {
+        // Send order confirmation email when admin confirms the order
+        await sendOrderConfirmation(customerEmail, {
+          orderId: order._id,
+          total: order.total,
+          paymentMethod: order.paymentMethod
+        });
+        console.log(`Order confirmation email sent to ${customerEmail}`);
+      } else {
+        // Send status update email for other status changes
+        await sendOrderStatusUpdate(customerEmail, {
+          orderId: order._id,
+          status: order.status,
+          total: order.total,
+          customerName: customerName
+        });
+        console.log(`Status update email sent to ${customerEmail}`);
+      }
+    } catch (emailError) {
+      console.error('Failed to send email:', emailError);
+      // Don't fail the status update if email fails
+    }
+
     res.json({ success: true, message: 'Order status updated', order });
   } catch (error) {
     console.error('Error updating order status:', error);
@@ -344,7 +382,7 @@ router.put('/:orderId/cancel', auth, async (req, res) => {
 router.put('/:orderId/return', auth, async (req, res) => {
   try {
     const { orderId } = req.params;
-    const { returnReason } = req.body;
+    const { returnReason, status } = req.body;
     
     if (!returnReason) {
       return res.status(400).json({ message: 'Return reason is required' });
@@ -355,13 +393,14 @@ router.put('/:orderId/return', auth, async (req, res) => {
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    if (order.status !== 'delivered' && order.status !== 'shipped') {
-      return res.status(400).json({ message: 'Only delivered or shipped orders can be returned' });
+    // Allow returns for confirmed, delivered, or shipped orders
+    if (!['confirmed', 'delivered', 'shipped'].includes(order.status)) {
+      return res.status(400).json({ message: 'Only confirmed, delivered or shipped orders can be returned' });
     }
 
-    order.status = 'returned';
+    order.status = 'return_initiated';
     order.returnReason = returnReason;
-    order.returnedAt = new Date();
+    order.returnInitiatedAt = new Date();
     await order.save();
 
     res.json({ success: true, message: 'Return request submitted successfully' });

@@ -118,30 +118,7 @@ router.post('/create', auth, upload.single('paymentScreenshot'), async (req, res
     );
     await cart.save();
 
-    // Send wholesale order confirmation email
-    try {
-      const userEmail = req.user.email;
-      const products = wholesaleProducts.map(item => ({
-        name: item.product.name,
-        quantity: item.quantity,
-        price: item.totalPrice.toFixed(2)
-      }));
-
-      await sendWholesaleOrderConfirmation(userEmail, {
-        orderId: order._id,
-        customerName: parsedShippingDetails.firstName,
-        products: products,
-        subtotal: subtotal.toFixed(2),
-        discount: discount.toFixed(2),
-        shipping: shipping.toFixed(2),
-        tax: tax.toFixed(2),
-        total: total.toFixed(2),
-        paymentMethod: paymentMethod
-      });
-      console.log('Wholesale order confirmation email sent successfully');
-    } catch (emailError) {
-      console.error('Failed to send wholesale order confirmation email:', emailError);
-    }
+    // Note: Wholesale order confirmation email will be sent when admin confirms the order
 
     res.status(201).json({ 
       success: true,

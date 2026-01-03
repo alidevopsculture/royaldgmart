@@ -30,6 +30,7 @@ import toast from "react-hot-toast"
 import { Search, Eye, X } from "lucide-react"
 import Image from "next/image"
 import { cleanDropdownText } from "@/lib/text-utils"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
 export function Orders() {
   const [search, setSearch] = useState("")
@@ -127,7 +128,7 @@ export function Orders() {
         method: 'PUT',
         headers: getAuthHeaders(),
         credentials: 'include',
-        body: JSON.stringify({ status })
+        body: JSON.stringify({ status, sendEmail: true })
       })
       
       console.log('Response status:', response.status, response.statusText)
@@ -163,7 +164,7 @@ export function Orders() {
           type: 'regular'
         }))
         
-        toast.success('Order status updated')
+        toast.success('Order status updated and email sent')
       } else {
         toast.error(result.message || 'Failed to update status')
       }
@@ -261,7 +262,7 @@ export function Orders() {
                   Status Filter
                 </Button>
               </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 bg-white/95 backdrop-blur-xl border-white/20">
+                <DropdownMenuContent align="end" className="w-48 bg-white border-gray-200">
                   <DropdownMenuLabel>Filter by status</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuCheckboxItem
@@ -329,6 +330,7 @@ export function Orders() {
                         <span className="ml-2">{sortDirection === "asc" ? "↑" : "↓"}</span>
                       )}
                     </TableHead>
+                    <TableHead className="hidden md:table-cell font-semibold text-gray-700">Tracking ID</TableHead>
                     <TableHead className="hidden md:table-cell font-semibold text-gray-700">Customer</TableHead>
                     <TableHead className="hidden lg:table-cell cursor-pointer font-semibold text-gray-700" onClick={() => handleSort("createdAt")}>
                       Date
@@ -356,6 +358,26 @@ export function Orders() {
                           <span className="font-mono text-sm text-gray-900">
                             #{order._id.slice(-8)}
                           </span>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          <button 
+                            onClick={() => {
+                              const productLinks = order.products.map((item: any) => 
+                                `https://royaldgmart.com/product-view/${item.product?._id}`
+                              ).join('\n');
+                              
+                              // Open each product in a new tab
+                              order.products.forEach((item: any) => {
+                                if (item.product?._id) {
+                                  window.open(`https://royaldgmart.com/product-view/${item.product._id}`, '_blank');
+                                }
+                              });
+                            }}
+                            className="font-mono text-xs text-blue-600 hover:text-blue-800 underline cursor-pointer"
+                            title="Click to view ordered products"
+                          >
+                            {order._id}
+                          </button>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
                           <div>
@@ -423,35 +445,55 @@ export function Orders() {
                               )}
                             </div>
                           )}
-                          {order.returnReason && (
+                          {(order.returnReason || order.status === 'return_initiated') && (
                             <div className="text-xs space-y-2">
-                              <div className="font-medium text-orange-600">Return Request</div>
-                              <div className="text-gray-500 truncate max-w-24" title={order.returnReason}>
-                                {order.returnReason}
-                              </div>
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <button className="font-medium text-orange-600 hover:text-orange-800 underline cursor-pointer">
+                                    Return Request
+                                  </button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Return Request Details</DialogTitle>
+                                  </DialogHeader>
+                                  <div className="space-y-4">
+                                    <div>
+                                      <p className="font-medium text-gray-900">Order ID: #{order._id.slice(-8)}</p>
+                                      <p className="text-sm text-gray-600">Customer: {order.shippingDetails?.firstName} {order.shippingDetails?.lastName}</p>
+                                    </div>
+                                    <div>
+                                      <p className="font-medium text-gray-900 mb-2">Return Reason:</p>
+                                      <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded border">
+                                        {order.returnReason || 'Return requested without specific reason'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
                               {order.status === 'return_initiated' ? (
-                                <div className="flex flex-col gap-1">
-                                  <Button size="sm" className="h-6 px-2 text-xs bg-orange-600 hover:bg-orange-700" onClick={() => handleStatusUpdate(order._id, 'returned')}>
-                                    Complete
-                                  </Button>
-                                </div>
-                              ) : order.status !== 'returned' && order.status !== 'return_approved' && order.status !== 'return_initiated' && (
                                 <div className="flex flex-col gap-1">
                                   <Button size="sm" className="h-6 px-2 text-xs bg-green-600 hover:bg-green-700" onClick={() => handleStatusUpdate(order._id, 'return_approved')}>
                                     Approve
                                   </Button>
                                   <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => {
-                                    const updatedOrders = orders.map(o => o._id === order._id ? {...o, returnReason: null} : o)
+                                    const updatedOrders = orders.map(o => o._id === order._id ? {...o, returnReason: null, status: 'confirmed'} : o)
                                     setOrders(updatedOrders)
                                     toast.success('Return request rejected')
                                   }}>
                                     Reject
                                   </Button>
                                 </div>
+                              ) : order.status !== 'returned' && order.status !== 'return_approved' && (
+                                <div className="flex flex-col gap-1">
+                                  <Button size="sm" className="h-6 px-2 text-xs bg-orange-600 hover:bg-orange-700" onClick={() => handleStatusUpdate(order._id, 'returned')}>
+                                    Complete
+                                  </Button>
+                                </div>
                               )}
                             </div>
                           )}
-                          {!order.cancelReason && !order.returnReason && (
+                          {!order.cancelReason && !order.returnReason && order.status !== 'return_initiated' && (
                             <span className="text-xs text-gray-400">-</span>
                           )}
                         </TableCell>

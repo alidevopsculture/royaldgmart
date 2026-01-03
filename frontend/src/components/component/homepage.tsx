@@ -96,9 +96,6 @@ export default async function Homepage({ user }: { user: any }) {
                         <p className="text-lg sm:text-xl md:text-2xl font-light opacity-95 max-w-2xl mx-auto">
                           {slide.subtitle}
                         </p>
-                        <Button className="bg-white/95 text-black hover:bg-white px-8 py-4 text-base sm:text-lg font-medium rounded-full shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105">
-                          Explore Collection
-                        </Button>
                       </div>
                     </div>
                   </div>
@@ -213,13 +210,6 @@ export default async function Homepage({ user }: { user: any }) {
               <p className="text-xl sm:text-2xl font-light opacity-95 max-w-2xl">
                 Your Fairytale Chapter Starts Here
               </p>
-              <Link
-                href="/collections/bridal"
-                className="inline-block px-8 py-4 bg-white/95 text-black font-medium rounded-full shadow-xl hover:bg-white transition-all duration-300 hover:scale-105 backdrop-blur-sm"
-                prefetch={false}
-              >
-                Discover Collection
-              </Link>
             </div>
           </div>
         </section>
@@ -381,13 +371,6 @@ export default async function Homepage({ user }: { user: any }) {
                           <p className="text-white text-sm mb-4 opacity-90">
                             {cat.subtitle}
                           </p>
-                          <Link
-                            href="#"
-                            className="inline-flex items-center justify-center rounded-full bg-white/90 text-black px-4 py-2 text-sm font-bold w-fit"
-                            prefetch={false}
-                          >
-                            {cat.buttonText}
-                          </Link>
                         </div>
                       </div>
                     </CarouselItem>
@@ -407,19 +390,19 @@ export default async function Homepage({ user }: { user: any }) {
                       name: "Forever Bride",
                       img: "/banners/landscape-08.png",
                       subtitle: "Your Fairytale Chapter Starts Here",
-                      buttonText: "Shop Now",
+                    
                     },
                     {
                       name: "Modern Muse",
                       img: "/banners/landscape-07.png",
                       subtitle: "Elegant Looks, Effortless Vibes",
-                      buttonText: "Explore Now",
+                    
                     },
                     {
                       name: "Classic Edit",
                       img: "/banners/landscape-06.png",
                       subtitle: "Traditional Magic, Timeless Style",
-                      buttonText: "See Collection",
+                      
                     },
                   ].map((cat) => (
                     <CarouselItem
@@ -440,13 +423,6 @@ export default async function Homepage({ user }: { user: any }) {
                           <p className="text-white text-2xl font-medium mb-8 drop-shadow-lg opacity-95">
                             {cat.subtitle}
                           </p>
-                          <Link
-                            href="#"
-                            className="inline-flex items-center justify-center rounded-full bg-white/90 text-black px-12 py-5 text-xl font-bold shadow-2xl hover:bg-white transition w-fit"
-                            prefetch={false}
-                          >
-                            {cat.buttonText}
-                          </Link>
                         </div>
                       </div>
                     </CarouselItem>
@@ -471,15 +447,6 @@ export default async function Homepage({ user }: { user: any }) {
                 Discover exceptional pieces for your festive and wedding wardrobe.
                 Embrace elegance with our curated premium collection.
               </p>
-              <div className="pt-4">
-                <Link
-                  href="/collections/festive"
-                  className="inline-block px-12 py-5 rounded-full bg-gradient-to-r from-gray-900 to-gray-700 text-white text-lg font-medium shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
-                  prefetch={false}
-                >
-                  Explore Collection
-                </Link>
-              </div>
             </div>
           </div>
         </section>

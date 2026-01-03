@@ -42,6 +42,13 @@ export default function OrderConfirmation() {
             </p>
           </div>
 
+          <div className="text-center space-y-2">
+            <p className="text-sm text-gray-600">Tracking ID</p>
+            <p className="font-mono text-xs text-gray-700 break-all px-2">
+              {orderId}
+            </p>
+          </div>
+
           {total && (
             <div className="text-center space-y-2">
               <p className="text-sm text-gray-600">Total Amount</p>
