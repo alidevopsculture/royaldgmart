@@ -129,8 +129,8 @@ export default function Checkout() {
         }
         
         // Fetch complete profile data
-        const { getUserProfile } = await import('@/actions/profile');
-        const profileResult = await getUserProfile();
+        const { getUserProfileClient } = await import('@/actions/profile');
+        const profileResult = await getUserProfileClient();
         
         let fullUserData = userData;
         if (profileResult && profileResult.success && profileResult.user) {
