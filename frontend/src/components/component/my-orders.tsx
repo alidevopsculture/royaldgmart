@@ -440,7 +440,10 @@ export function MyOrders() {
                               
                               fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${id}/cancel`, {
                                 method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
+                                headers: { 
+                                  'Content-Type': 'application/json',
+                                  'Authorization': `Bearer ${document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1] || ''}`
+                                },
                                 credentials: 'include',
                                 body: JSON.stringify({ cancelReason: reason })
                               }).catch(() => console.log('Backend sync failed'))
@@ -469,7 +472,10 @@ export function MyOrders() {
                               
                               fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${id}/return`, {
                                 method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
+                                headers: { 
+                                  'Content-Type': 'application/json',
+                                  'Authorization': `Bearer ${document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1] || ''}`
+                                },
                                 credentials: 'include',
                                 body: JSON.stringify({ returnReason: reason })
                               }).then(response => {
