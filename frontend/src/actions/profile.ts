@@ -33,17 +33,21 @@ export async function getUserProfile() {
 
 // Client-side profile fetching function
 export async function getUserProfileClient() {
+  // Early return if not in browser
+  if (typeof window === 'undefined') {
+    return { success: false, error: 'Server side rendering' };
+  }
+
   try {
-    // Check if we're in browser environment
-    if (typeof window === 'undefined' || typeof document === 'undefined') {
-      return { success: false, error: 'Not in browser environment' };
+    let token;
+    try {
+      token = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('token='))
+        ?.split('=')[1];
+    } catch (e) {
+      return { success: false, error: 'Cannot access cookies' };
     }
-    
-    // Get token from cookies for authentication
-    const token = document.cookie
-      .split('; ')
-      .find(row => row.startsWith('token='))
-      ?.split('=')[1];
     
     if (!token) {
       return { success: false, error: 'Not authenticated' };
@@ -104,17 +108,21 @@ export async function updateProfile(profileData: any) {
 
 // Client-side profile update function
 export async function updateProfileClient(profileData: any) {
+  // Early return if not in browser
+  if (typeof window === 'undefined') {
+    return { success: false, error: 'Server side rendering' };
+  }
+
   try {
-    // Check if we're in browser environment
-    if (typeof window === 'undefined' || typeof document === 'undefined') {
-      return { success: false, error: 'Not in browser environment' };
+    let token;
+    try {
+      token = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('token='))
+        ?.split('=')[1];
+    } catch (e) {
+      return { success: false, error: 'Cannot access cookies' };
     }
-    
-    // Get token from cookies for authentication
-    const token = document.cookie
-      .split('; ')
-      .find(row => row.startsWith('token='))
-      ?.split('=')[1];
     
     if (!token) {
       return { success: false, error: 'Not authenticated' };

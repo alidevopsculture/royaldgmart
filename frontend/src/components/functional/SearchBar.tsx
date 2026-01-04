@@ -147,7 +147,7 @@ function SearchBarComponent({}:SearchBarProps ){
                     {/* Search Button - Mobile */}
                     <Button 
                         type="submit" 
-                        className="absolute right-2 top-1/2 -translate-y-1/2 h-8 px-4 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-all duration-200 md:hidden"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-8 px-4 bg-gray-900 hover:bg-gray-800 text-white rounded-2xl text-sm font-medium transition-all duration-200 md:hidden"
                     >
                         Search
                     </Button>

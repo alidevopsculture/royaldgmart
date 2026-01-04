@@ -254,13 +254,36 @@ export default function Checkout() {
     const handleProfileUpdate = (event: any) => {
       console.log('Profile updated from other component:', event.detail);
       if (event.detail) {
-        setFormData(event.detail);
+        const updatedData = {
+          firstName: event.detail.firstName || '',
+          lastName: event.detail.lastName || '',
+          email: event.detail.email || '',
+          phone: event.detail.phone || '',
+          address: event.detail.address || '',
+          city: event.detail.city || '',
+          state: event.detail.state || '',
+          zipCode: event.detail.zipCode || '',
+          country: event.detail.country || 'India'
+        };
+        setFormData(updatedData);
       } else {
         // Fallback to localStorage
         const cachedProfile = localStorage.getItem('userProfileCache');
         if (cachedProfile) {
           try {
-            setFormData(JSON.parse(cachedProfile));
+            const parsedProfile = JSON.parse(cachedProfile);
+            const updatedData = {
+              firstName: parsedProfile.firstName || '',
+              lastName: parsedProfile.lastName || '',
+              email: parsedProfile.email || '',
+              phone: parsedProfile.phone || '',
+              address: parsedProfile.address || '',
+              city: parsedProfile.city || '',
+              state: parsedProfile.state || '',
+              zipCode: parsedProfile.zipCode || '',
+              country: parsedProfile.country || 'India'
+            };
+            setFormData(updatedData);
           } catch (e) {
             console.error('Failed to parse cached profile:', e);
           }
@@ -572,7 +595,10 @@ export default function Checkout() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-indigo-200 rounded-full animate-spin border-t-indigo-600 mx-auto"></div>
+          <div className="relative mx-auto mb-4">
+            <div className="w-16 h-16 border-4 border-orange-200 rounded-full animate-spin border-t-orange-600 shadow-lg"></div>
+            <div className="absolute inset-0 w-16 h-16 border-4 border-transparent rounded-full animate-ping border-t-orange-400 opacity-75"></div>
+          </div>
           <p className="mt-4 text-gray-600">Loading checkout...</p>
         </div>
       </div>
@@ -858,7 +884,9 @@ export default function Checkout() {
                 >
                   {orderLoading ? (
                     <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <div className="relative">
+                        <div className="w-4 h-4 border-2 border-white/30 rounded-full animate-spin border-t-white"></div>
+                      </div>
                       Placing Order...
                     </div>
                   ) : paymentMethod === 'razorpay' ? (
