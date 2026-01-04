@@ -230,6 +230,24 @@ router.get('/my-orders', auth, async (req, res) => {
   }
 });
 
+// Alternative route for user orders
+router.get('/user', auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    console.log('Fetching orders for user ID:', userId);
+    
+    const orders = await Order.find({ user: userId })
+      .populate('products.product', 'name price images')
+      .sort({ createdAt: -1 });
+
+    console.log('Found orders for user:', orders.length);
+    res.json({ success: true, orders });
+  } catch (error) {
+    console.error('Error fetching user orders:', error);
+    res.status(500).json({ message: 'Failed to fetch orders' });
+  }
+});
+
 // Get all orders (Admin only)
 router.get('/all', auth, async (req, res) => {
   try {
