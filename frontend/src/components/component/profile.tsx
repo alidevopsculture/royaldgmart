@@ -256,6 +256,8 @@ export function Profile() {
         // Clear any cached profile data for checkout sync
         if (typeof window !== 'undefined') {
           localStorage.removeItem('userProfileCache')
+          // Store updated profile data
+          localStorage.setItem('userProfileCache', JSON.stringify(profileResult.user))
           window.dispatchEvent(new CustomEvent('profileUpdated'))
         }
       } else {

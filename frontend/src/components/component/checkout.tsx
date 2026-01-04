@@ -139,8 +139,21 @@ export default function Checkout() {
         if (profileResult && profileResult.success && profileResult.user) {
           fullUserData = { ...userData, ...profileResult.user };
           console.log('Profile data loaded:', profileResult.user);
+          // Cache the profile data
+          localStorage.setItem('userProfileCache', JSON.stringify(profileResult.user));
         } else {
           console.log('Profile fetch failed:', profileResult?.error);
+          // Try to use cached profile data
+          const cachedProfile = localStorage.getItem('userProfileCache');
+          if (cachedProfile) {
+            try {
+              const parsedProfile = JSON.parse(cachedProfile);
+              fullUserData = { ...userData, ...parsedProfile };
+              console.log('Using cached profile data:', parsedProfile);
+            } catch (e) {
+              console.error('Failed to parse cached profile:', e);
+            }
+          }
         }
         
         setUser(fullUserData);
