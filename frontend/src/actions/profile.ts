@@ -35,7 +35,7 @@ export async function getUserProfile() {
 export async function getUserProfileClient() {
   try {
     // Check if we're in browser environment
-    if (typeof window === 'undefined') {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
       return { success: false, error: 'Not in browser environment' };
     }
     
@@ -106,7 +106,7 @@ export async function updateProfile(profileData: any) {
 export async function updateProfileClient(profileData: any) {
   try {
     // Check if we're in browser environment
-    if (typeof window === 'undefined') {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
       return { success: false, error: 'Not in browser environment' };
     }
     

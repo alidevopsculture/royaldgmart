@@ -162,27 +162,44 @@ export function Profile() {
           return
         }
         
-        // Then fetch complete profile data
-        const { getUserProfileClient } = await import('@/actions/profile')
-        const profileResult = await getUserProfileClient()
-        
-        if (profileResult.success && profileResult.user) {
-          const fullUserData = profileResult.user
-          setUser(fullUserData)
-          setFormData({
-            username: fullUserData.username || '',
-            email: fullUserData.email || '',
-            phone: fullUserData.phone || '',
-            firstName: fullUserData.firstName || '',
-            lastName: fullUserData.lastName || '',
-            address: fullUserData.address || '',
-            city: fullUserData.city || '',
-            state: fullUserData.state || '',
-            zipCode: fullUserData.zipCode || '',
-            country: fullUserData.country || ''
-          })
+        // Then fetch complete profile data - only on client side
+        if (typeof document !== 'undefined') {
+          const { getUserProfileClient } = await import('@/actions/profile')
+          const profileResult = await getUserProfileClient()
+          
+          if (profileResult.success && profileResult.user) {
+            const fullUserData = profileResult.user
+            setUser(fullUserData)
+            setFormData({
+              username: fullUserData.username || '',
+              email: fullUserData.email || '',
+              phone: fullUserData.phone || '',
+              firstName: fullUserData.firstName || '',
+              lastName: fullUserData.lastName || '',
+              address: fullUserData.address || '',
+              city: fullUserData.city || '',
+              state: fullUserData.state || '',
+              zipCode: fullUserData.zipCode || '',
+              country: fullUserData.country || ''
+            })
+          } else {
+            // Fallback to basic user data if profile fetch fails
+            setUser(userData)
+            setFormData({
+              username: userData.username || '',
+              email: userData.email || '',
+              phone: '',
+              firstName: '',
+              lastName: '',
+              address: '',
+              city: '',
+              state: '',
+              zipCode: '',
+              country: ''
+            })
+          }
         } else {
-          // Fallback to basic user data if profile fetch fails
+          // If document is not available, use basic user data
           setUser(userData)
           setFormData({
             username: userData.username || '',
@@ -249,7 +266,7 @@ export function Profile() {
 
   const handleSave = async () => {
     // Ensure we're on the client side
-    if (typeof window === 'undefined') {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
       toast.error('Please try again');
       return;
     }
