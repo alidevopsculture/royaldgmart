@@ -149,6 +149,9 @@ export function Profile() {
 
 
   useEffect(() => {
+    // Ensure we're on the client side
+    if (typeof window === 'undefined') return;
+    
     const loadUser = async () => {
       try {
         // First check if user is authenticated
@@ -222,6 +225,12 @@ export function Profile() {
   }
 
   const handleSave = async () => {
+    // Ensure we're on the client side
+    if (typeof window === 'undefined') {
+      toast.error('Please try again');
+      return;
+    }
+    
     try {
       setLoading(true)
       const { updateProfileClient, getUserProfileClient } = await import('@/actions/profile')

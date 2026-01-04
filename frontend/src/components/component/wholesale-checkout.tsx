@@ -38,6 +38,9 @@ export default function WholesaleCheckout() {
   const router = useRouter();
 
   useEffect(() => {
+    // Ensure we're on the client side
+    if (typeof window === 'undefined') return;
+    
     const initializeCheckout = async () => {
       try {
         setLoading(true);
