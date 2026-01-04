@@ -166,6 +166,7 @@ export default function WholesaleCheckout() {
     return () => {
       window.removeEventListener('profileUpdated', handleProfileUpdate);
     };
+  }, [router]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const newFormData = {
