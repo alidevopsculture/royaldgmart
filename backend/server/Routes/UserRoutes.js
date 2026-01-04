@@ -5,6 +5,7 @@ const User = require("../Models/UserModels");
 const Otp = require("../Models/OtpSchema");
 const jwt = require("jsonwebtoken");
 const { sendOTP, sendEmail } = require('../utility/emailService');
+const { authenticateToken: auth } = require('../MiddleWare/auth');
 const router = express.Router();
 
 // Send OTP for signup
@@ -238,15 +239,9 @@ router.post('/login',
 );
 
 // Get user profile
-router.get('/profile', async (req, res) => {
+router.get('/profile', auth, async (req, res) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    if (!token) {
-      return res.status(401).json({ success: false, errors: [{ msg: 'No token provided' }] });
-    }
-
-    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-    const userId = decoded.user.id;
+    const userId = req.user.id;
 
     const user = await User.findById(userId).select('-password');
     if (!user) {
@@ -256,35 +251,29 @@ router.get('/profile', async (req, res) => {
     res.json({ success: true, user: user });
   } catch (error) {
     console.error(error);
-    res.status(401).json({ success: false, errors: [{ msg: 'Invalid token' }] });
+    res.status(500).json({ success: false, errors: [{ msg: 'Server error' }] });
   }
 });
 
 
 // Update user profile
-router.put('/profile', async (req, res) => {
+router.put('/profile', auth, async (req, res) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    if (!token) {
-      return res.status(401).json({ errors: [{ msg: 'No token provided' }] });
-    }
+    const userId = req.user.id;
 
-    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-    const userId = decoded.user.id;
-
-    const { firstName, lastName, phone, address, city, zipCode, country } = req.body;
+    const { firstName, lastName, phone, address, city, zipCode, country, state } = req.body;
     
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { firstName, lastName, phone, address, city, zipCode, country },
+      { firstName, lastName, phone, address, city, zipCode, country, state },
       { new: true, runValidators: true }
-    );
+    ).select('-password');
 
     if (!updatedUser) {
       return res.status(404).json({ errors: [{ msg: 'User not found' }] });
     }
 
-    res.json({ message: 'Profile updated successfully', user: updatedUser });
+    res.json({ success: true, message: 'Profile updated successfully', user: updatedUser });
   } catch (error) {
     console.error(error);
     res.status(500).json({ errors: [{ msg: 'Server error' }] });

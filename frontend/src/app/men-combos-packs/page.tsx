@@ -40,7 +40,7 @@ export default function MenCombosPacks() {
   return (
     <>
 
-      <section className="relative w-full h-[320px] md:h-[400px] flex items-center justify-center mb-8 overflow-hidden">
+      <section className="relative w-full h-[520px] md:h-[600px] flex items-center justify-center mb-8 overflow-hidden">
         <Image src="/banners/landscape-10.png" alt="Men Combos Packs Banner" fill priority className="object-cover opacity-100" />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center z-10">
           <h1 className="text-4xl md:text-5xl font-extrabold text-white drop-shadow mb-4">Men Combos & Packs</h1>
