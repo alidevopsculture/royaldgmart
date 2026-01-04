@@ -565,7 +565,7 @@ function CategoryCard({
       <img
         src={img}
         alt={title}
-        className="object-cover object-center w-full h-full transition-transform duration-700 group-hover:scale-110"
+        className="object-contain object-center w-full h-full transition-transform duration-700 group-hover:scale-105 bg-gray-50"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
       <div className="absolute inset-0 flex flex-col justify-end p-4 sm:p-6 md:p-8">
