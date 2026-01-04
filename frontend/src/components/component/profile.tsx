@@ -206,8 +206,21 @@ export function Profile() {
       }
     }
     
-    loadUser()
-  }, [])
+    // Listen for profile updates from checkout components
+    const handleProfileUpdate = (event: any) => {
+      console.log('Profile updated from checkout:', event.detail);
+      if (event.detail) {
+        setFormData(event.detail);
+      }
+    };
+    
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+    loadUser();
+    
+    return () => {
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
+    };
+  }, [router]);
 
 
 
@@ -221,11 +234,18 @@ export function Profile() {
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData(prev => ({
-      ...prev,
+    const newFormData = {
+      ...formData,
       [e.target.name]: e.target.value
-    }))
-  }
+    };
+    setFormData(newFormData);
+    
+    // Auto-save to localStorage for real-time sync with checkout
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('userProfileCache', JSON.stringify(newFormData));
+      window.dispatchEvent(new CustomEvent('profileUpdated', { detail: newFormData }));
+    }
+  };
 
   const handleSave = async () => {
     // Ensure we're on the client side
