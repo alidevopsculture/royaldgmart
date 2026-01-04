@@ -141,6 +141,7 @@ export function Profile() {
     lastName: '',
     address: '',
     city: '',
+    state: '',
     zipCode: '',
     country: ''
   })
@@ -176,6 +177,7 @@ export function Profile() {
             lastName: fullUserData.lastName || '',
             address: fullUserData.address || '',
             city: fullUserData.city || '',
+            state: fullUserData.state || '',
             zipCode: fullUserData.zipCode || '',
             country: fullUserData.country || ''
           })
@@ -190,6 +192,7 @@ export function Profile() {
             lastName: '',
             address: '',
             city: '',
+            state: '',
             zipCode: '',
             country: ''
           })
@@ -233,6 +236,9 @@ export function Profile() {
     
     try {
       setLoading(true)
+      
+      console.log('Saving profile data:', formData);
+      
       const { updateProfileClient, getUserProfileClient } = await import('@/actions/profile')
       const result = await updateProfileClient({
         firstName: formData.firstName,
@@ -241,8 +247,11 @@ export function Profile() {
         address: formData.address,
         city: formData.city,
         zipCode: formData.zipCode,
-        country: formData.country
+        country: formData.country,
+        state: formData.state
       })
+      
+      console.log('Profile update result:', result);
       
       if (result && result.success) {
         toast.success('✅ Profile updated successfully!')
@@ -251,16 +260,18 @@ export function Profile() {
         const profileResult = await getUserProfileClient()
         if (profileResult.success && profileResult.user) {
           setUser(profileResult.user)
+          console.log('Profile refreshed:', profileResult.user);
         }
         
         // Clear any cached profile data for checkout sync
         if (typeof window !== 'undefined') {
           localStorage.removeItem('userProfileCache')
           // Store updated profile data
-          localStorage.setItem('userProfileCache', JSON.stringify(profileResult.user))
+          localStorage.setItem('userProfileCache', JSON.stringify(profileResult.user || result.user))
           window.dispatchEvent(new CustomEvent('profileUpdated'))
         }
       } else {
+        console.error('Profile update failed:', result);
         toast.error(result?.error || 'Failed to update profile')
       }
     } catch (error) {
@@ -450,6 +461,18 @@ export function Profile() {
                               />
                             </div>
                             <div>
+                              <Label htmlFor="state" className="text-sm font-medium text-gray-700">State</Label>
+                              <Input
+                                id="state"
+                                name="state"
+                                value={formData.state}
+                                onChange={handleInputChange}
+                                className="mt-1 bg-white/50 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                              />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
                               <Label htmlFor="zipCode" className="text-sm font-medium text-gray-700">ZIP Code *</Label>
                               <Input
                                 id="zipCode"
@@ -459,16 +482,16 @@ export function Profile() {
                                 className="mt-1 bg-white/50 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
                               />
                             </div>
-                          </div>
-                          <div>
-                            <Label htmlFor="country" className="text-sm font-medium text-gray-700">Country *</Label>
-                            <Input
-                              id="country"
-                              name="country"
-                              value={formData.country}
-                              onChange={handleInputChange}
-                              className="mt-1 bg-white/50 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
-                            />
+                            <div>
+                              <Label htmlFor="country" className="text-sm font-medium text-gray-700">Country *</Label>
+                              <Input
+                                id="country"
+                                name="country"
+                                value={formData.country}
+                                onChange={handleInputChange}
+                                className="mt-1 bg-white/50 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
