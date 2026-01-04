@@ -13,8 +13,9 @@ import Link from "next/link"
 
 interface Order {
   _id: string;
-  orderId: string;
-  totalAmount: number;
+  orderId?: string;
+  total: number;
+  totalAmount?: number;
   status: string;
   paymentMethod: string;
   createdAt: string;
@@ -531,7 +532,7 @@ export function Profile() {
                   <div key={order._id} className="border rounded-lg p-4">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
                       <div>
-                        <h4 className="font-semibold text-gray-900">Order #{order.orderId}</h4>
+                        <h4 className="font-semibold text-gray-900">Order #{order.orderId || order._id.slice(-8)}</h4>
                         <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
                           <Calendar className="w-4 h-4" />
                           {new Date(order.createdAt).toLocaleDateString()}
@@ -541,7 +542,7 @@ export function Profile() {
                         <div className="text-right">
                           <div className="font-semibold text-gray-900 flex items-center gap-1">
                             <IndianRupee className="w-4 h-4" />
-                            {order.totalAmount.toFixed(2)}
+                            {(order.total || order.totalAmount || 0).toFixed(2)}
                           </div>
                           <div className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
                             {order.status}
