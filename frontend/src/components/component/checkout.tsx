@@ -43,6 +43,13 @@ interface Cart {
   updatedAt: string;
 }
 
+// Extend Window interface for TypeScript
+declare global {
+  interface Window {
+    autoSaveTimeout: NodeJS.Timeout;
+  }
+}
+
 export default function Checkout() {
   const [user, setUser] = useState<any>(null);
   const [cart, setCart] = useState<Cart | null>(null);
@@ -243,10 +250,22 @@ export default function Checkout() {
       }
     };
 
-    // Listen for profile updates
-    const handleProfileUpdate = () => {
-      console.log('Profile updated, refreshing checkout data');
-      initializeCheckout();
+    // Listen for profile updates from other components
+    const handleProfileUpdate = (event: any) => {
+      console.log('Profile updated from other component:', event.detail);
+      if (event.detail) {
+        setFormData(event.detail);
+      } else {
+        // Fallback to localStorage
+        const cachedProfile = localStorage.getItem('userProfileCache');
+        if (cachedProfile) {
+          try {
+            setFormData(JSON.parse(cachedProfile));
+          } catch (e) {
+            console.error('Failed to parse cached profile:', e);
+          }
+        }
+      }
     };
     
     window.addEventListener('profileUpdated', handleProfileUpdate);
@@ -293,10 +312,38 @@ export default function Checkout() {
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData(prev => ({
-      ...prev,
+    const newFormData = {
+      ...formData,
       [e.target.name]: e.target.value
-    }));
+    };
+    setFormData(newFormData);
+    
+    // Auto-save to localStorage for real-time sync with profile
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('userProfileCache', JSON.stringify(newFormData));
+      window.dispatchEvent(new CustomEvent('profileUpdated', { detail: newFormData }));
+      
+      // Debounced auto-save to database
+      clearTimeout(window.autoSaveTimeout);
+      window.autoSaveTimeout = setTimeout(async () => {
+        try {
+          const { updateProfileClient } = await import('@/actions/profile');
+          await updateProfileClient({
+            firstName: newFormData.firstName,
+            lastName: newFormData.lastName,
+            phone: newFormData.phone,
+            address: newFormData.address,
+            city: newFormData.city,
+            state: newFormData.state,
+            zipCode: newFormData.zipCode,
+            country: newFormData.country
+          });
+          console.log('Auto-saved profile from checkout');
+        } catch (error) {
+          console.error('Auto-save failed:', error);
+        }
+      }, 2000); // Save after 2 seconds of no typing
+    }
   };
 
   const handleRazorpayPayment = async () => {
