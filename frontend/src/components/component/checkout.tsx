@@ -134,11 +134,16 @@ export default function Checkout() {
         
         let fullUserData = userData;
         if (profileResult && profileResult.success && profileResult.user) {
-          fullUserData = profileResult.user;
+          fullUserData = { ...userData, ...profileResult.user };
+          console.log('Profile data loaded:', profileResult.user);
+        } else {
+          console.log('Profile fetch failed:', profileResult?.error);
         }
         
         setUser(fullUserData);
-        setFormData({
+        
+        // Always populate form with available data
+        const newFormData = {
           firstName: fullUserData.firstName || '',
           lastName: fullUserData.lastName || '',
           email: fullUserData.email || '',
@@ -148,7 +153,10 @@ export default function Checkout() {
           state: fullUserData.state || '',
           zipCode: fullUserData.zipCode || '',
           country: fullUserData.country || 'India'
-        });
+        };
+        
+        console.log('Setting form data:', newFormData);
+        setFormData(newFormData);
         
         const guestSessionId = getCurrentGuestSession();
         if (guestSessionId) {

@@ -55,12 +55,16 @@ export default function WholesaleCheckout() {
         
         let fullUserData = userData;
         if (profileResult && profileResult.success && profileResult.user) {
-          fullUserData = profileResult.user;
+          fullUserData = { ...userData, ...profileResult.user };
+          console.log('Wholesale profile data loaded:', profileResult.user);
+        } else {
+          console.log('Wholesale profile fetch failed:', profileResult?.error);
         }
         
         setUser(fullUserData);
-        setFormData(prev => ({
-          ...prev,
+        
+        // Always populate form with available data
+        const newFormData = {
           firstName: fullUserData.firstName || '',
           lastName: fullUserData.lastName || '',
           email: fullUserData.email || '',
@@ -70,7 +74,10 @@ export default function WholesaleCheckout() {
           state: fullUserData.state || '',
           zipCode: fullUserData.zipCode || '',
           country: fullUserData.country || 'India'
-        }));
+        };
+        
+        console.log('Setting wholesale form data:', newFormData);
+        setFormData(newFormData);
         
         const cartIdentifier = await getCartIdentifier(userData);
         const cartData = await getAllCarts(cartIdentifier);

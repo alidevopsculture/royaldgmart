@@ -34,6 +34,11 @@ export async function getUserProfile() {
 // Client-side profile fetching function
 export async function getUserProfileClient() {
   try {
+    // Check if we're in browser environment
+    if (typeof window === 'undefined') {
+      return { success: false, error: 'Not in browser environment' };
+    }
+    
     // Get token from cookies for authentication
     const token = document.cookie
       .split('; ')
@@ -100,6 +105,11 @@ export async function updateProfile(profileData: any) {
 // Client-side profile update function
 export async function updateProfileClient(profileData: any) {
   try {
+    // Check if we're in browser environment
+    if (typeof window === 'undefined') {
+      return { success: false, error: 'Not in browser environment' };
+    }
+    
     // Get token from cookies for authentication
     const token = document.cookie
       .split('; ')
