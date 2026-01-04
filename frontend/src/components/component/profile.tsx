@@ -159,8 +159,8 @@ export function Profile() {
         }
         
         // Then fetch complete profile data
-        const { getUserProfile } = await import('@/actions/profile')
-        const profileResult = await getUserProfile()
+        const { getUserProfileClient } = await import('@/actions/profile')
+        const profileResult = await getUserProfileClient()
         
         if (profileResult.success && profileResult.user) {
           const fullUserData = profileResult.user
@@ -224,8 +224,8 @@ export function Profile() {
   const handleSave = async () => {
     try {
       setLoading(true)
-      const { updateProfile, getUserProfile } = await import('@/actions/profile')
-      const result = await updateProfile({
+      const { updateProfileClient, getUserProfileClient } = await import('@/actions/profile')
+      const result = await updateProfileClient({
         firstName: formData.firstName,
         lastName: formData.lastName,
         phone: formData.phone,
@@ -239,7 +239,7 @@ export function Profile() {
         toast.success('✅ Profile updated successfully!')
         
         // Refresh user data after successful update
-        const profileResult = await getUserProfile()
+        const profileResult = await getUserProfileClient()
         if (profileResult.success && profileResult.user) {
           setUser(profileResult.user)
         }
