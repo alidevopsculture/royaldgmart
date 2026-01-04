@@ -60,8 +60,21 @@ export default function WholesaleCheckout() {
         if (profileResult && profileResult.success && profileResult.user) {
           fullUserData = { ...userData, ...profileResult.user };
           console.log('Wholesale profile data loaded:', profileResult.user);
+          // Cache the profile data
+          localStorage.setItem('userProfileCache', JSON.stringify(profileResult.user));
         } else {
           console.log('Wholesale profile fetch failed:', profileResult?.error);
+          // Try to use cached profile data
+          const cachedProfile = localStorage.getItem('userProfileCache');
+          if (cachedProfile) {
+            try {
+              const parsedProfile = JSON.parse(cachedProfile);
+              fullUserData = { ...userData, ...parsedProfile };
+              console.log('Using cached wholesale profile data:', parsedProfile);
+            } catch (e) {
+              console.error('Failed to parse cached profile:', e);
+            }
+          }
         }
         
         setUser(fullUserData);

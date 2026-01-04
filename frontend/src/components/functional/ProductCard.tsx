@@ -55,10 +55,15 @@ export default function ProductCard({ product }: { product: any }) {
         
         {/* Cart Icon */}
         <button
-          className="absolute top-3 right-3 z-10 text-white w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+          className="absolute top-3 right-3 z-10 text-white w-8 h-8 rounded-full flex items-center justify-center transition-colors touch-manipulation"
           style={{ backgroundColor: 'rgba(241, 100, 34, 1)' }}
+          onTouchStart={(e) => e.stopPropagation()}
           onClick={async (e) => {
+            e.preventDefault();
             e.stopPropagation();
+            
+            if (isAddingToCart) return;
+            
             setIsAddingToCart(true);
             
             try {
@@ -158,9 +163,10 @@ export default function ProductCard({ product }: { product: any }) {
         
         {/* BUY NOW BUTTON */}
         <Button
-          className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold" 
-
+          className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold touch-manipulation" 
+          onTouchStart={(e) => e.stopPropagation()}
           onClick={async (e) => {
+            e.preventDefault();
             e.stopPropagation();
             
             try {
