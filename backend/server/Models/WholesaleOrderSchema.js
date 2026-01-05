@@ -18,6 +18,7 @@ const wholesaleOrderSchema = new mongoose.Schema({
       min: 1
     },
     size: String,
+    color: String,
     purchasePrice: {
       type: Number,
       required: true

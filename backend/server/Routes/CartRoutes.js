@@ -34,7 +34,7 @@ router.get('/:userId', async (req, res) => {
 // Add product to cart
 router.post('/:userId/add', async (req, res) => {
   try {
-    const { product: productId, quantity = 1, size } = req.body;
+    const { product: productId, quantity = 1, size, color } = req.body;
     
     // Validate required fields
     if (!productId) {
@@ -68,9 +68,10 @@ router.post('/:userId/add', async (req, res) => {
     // Use findOrCreate to get or create cart
     let cart = await Cart.findOrCreate(req.params.userId);
 
-    // Check if product already exists in cart with the same size
+    // Check if product already exists in cart with the same size and color
     const existingItemIndex = cart.products.findIndex(item => 
-      item.product && item.product.toString() === productId.toString() && item.size === size
+      item.product && item.product.toString() === productId.toString() && 
+      item.size === size && item.color === color
     );
 
     // Calculate price based on product and size
@@ -93,6 +94,7 @@ router.post('/:userId/add', async (req, res) => {
         product: productId,
         quantity,
         size: size || null,
+        color: color || null,
         purchasePrice: purchasePrice,
         totalPrice: purchasePrice * quantity,
         priceWithTax: 0, // Will be calculated during checkout

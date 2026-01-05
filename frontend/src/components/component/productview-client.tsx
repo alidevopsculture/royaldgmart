@@ -45,7 +45,8 @@ export function ProductViewClient({ product, productId, user }: ProductViewClien
       let body: any = {
         product: productId,
         quantity: quantity,
-        size: selectedSize
+        size: selectedSize,
+        color: selectedColor
       };
 
       if (user) {

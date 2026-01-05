@@ -24,6 +24,10 @@ const GuestCartItemSchema = new mongoose.Schema({
   size: {
     type: String,
     default: null
+  },
+  color: {
+    type: String,
+    default: null
   }, 
   purchasePrice: {
     type: Number,
@@ -135,9 +139,10 @@ GuestCartSchema.statics.transferToUserCart = async function(sessionId, userId) {
   for (const guestItem of validItems) {
     const productId = guestItem.product._id.toString();
     
-    // Check if product already exists in user cart with same size
+    // Check if product already exists in user cart with same size and color
     const existingItemIndex = userCart.products.findIndex(item => 
-      item.product && item.product.toString() === productId && item.size === guestItem.size
+      item.product && item.product.toString() === productId && 
+      item.size === guestItem.size && item.color === guestItem.color
     );
     
     if (existingItemIndex !== -1) {
@@ -151,6 +156,7 @@ GuestCartSchema.statics.transferToUserCart = async function(sessionId, userId) {
         product: productId,
         quantity: guestItem.quantity,
         size: guestItem.size,
+        color: guestItem.color,
         purchasePrice: guestItem.purchasePrice,
         totalPrice: guestItem.totalPrice,
         priceWithTax: guestItem.priceWithTax,

@@ -30,6 +30,7 @@ interface CartItem {
   };
   quantity: number;
   size: string | null;
+  color?: string;
   purchasePrice: number;
   totalPrice: number;
 }
@@ -841,6 +842,11 @@ export default function Checkout() {
                           {item.size && (
                             <Badge variant="outline" className="text-xs">
                               {item.size}
+                            </Badge>
+                          )}
+                          {item.color && (
+                            <Badge variant="outline" className="text-xs">
+                              {item.color}
                             </Badge>
                           )}
                         </div>

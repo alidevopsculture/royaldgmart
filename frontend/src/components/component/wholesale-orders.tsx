@@ -306,6 +306,42 @@ export function WholesaleOrders() {
           </div>
           <div className="flex items-center gap-4">
             <Button 
+              onClick={async () => {
+                try {
+                  const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
+                  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/wholesale-orders/export/csv`, {
+                    method: 'GET',
+                    headers: {
+                      'Authorization': `Bearer ${token}`,
+                      'Content-Type': 'application/json'
+                    },
+                    credentials: 'include'
+                  });
+                  
+                  if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `wholesale-orders-${new Date().toISOString().split('T')[0]}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                  } else {
+                    toast.error('Failed to export wholesale orders');
+                  }
+                } catch (error) {
+                  toast.error('Export failed');
+                }
+              }}
+              variant="outline"
+              size="sm"
+              className="bg-green-600 text-white hover:bg-green-700"
+            >
+              📊 Export CSV
+            </Button>
+            <Button 
               onClick={fetchOrders}
               variant="outline"
               size="sm"
@@ -433,6 +469,7 @@ export function WholesaleOrders() {
                         <span className="ml-2">{sortDirection === "asc" ? "↑" : "↓"}</span>
                       )}
                     </TableHead>
+                    <TableHead className="hidden lg:table-cell font-semibold text-gray-700">Quantity</TableHead>
                     <TableHead className="hidden lg:table-cell font-semibold text-gray-700">Payment</TableHead>
                     <TableHead className="font-semibold text-gray-700">Status</TableHead>
                     <TableHead className="hidden xl:table-cell font-semibold text-gray-700">Cancel/Return</TableHead>
@@ -464,6 +501,15 @@ export function WholesaleOrders() {
                               -{order.discount}% discount
                             </div>
                           )}
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          <div className="text-sm text-gray-700">
+                            {order.products?.map((item: any, index: number) => (
+                              <div key={index} className="mb-1">
+                                {item.quantity || 1}
+                              </div>
+                            ))}
+                          </div>
                         </TableCell>
                         <TableCell className="hidden lg:table-cell">
                           <div className="space-y-1">
@@ -601,7 +647,7 @@ export function WholesaleOrders() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-12">
+                      <TableCell colSpan={9} className="text-center py-12">
                         <p className="text-gray-500">No wholesale orders found</p>
                       </TableCell>
                     </TableRow>
