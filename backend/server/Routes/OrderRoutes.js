@@ -93,6 +93,15 @@ router.post('/create', auth, upload.single('paymentScreenshot'), async (req, res
     if (validProducts.length === 0) {
       return res.status(400).json({ message: 'No valid products in cart' });
     }
+    
+    // Debug: Log cart products to see if color is present
+    console.log('Cart products with color info:', validProducts.map(item => ({
+      productId: item.product._id,
+      quantity: item.quantity,
+      size: item.size,
+      color: item.color,
+      hasColor: !!item.color
+    })));
 
     // Calculate totals using valid products
     const subtotal = validProducts.reduce((total, item) => total + item.totalPrice, 0);
@@ -103,7 +112,14 @@ router.post('/create', auth, upload.single('paymentScreenshot'), async (req, res
     // Create order
     const orderData = {
       user: userId,
-      products: validProducts,
+      products: validProducts.map(item => ({
+        product: item.product._id,
+        quantity: item.quantity,
+        size: item.size,
+        color: item.color,
+        purchasePrice: item.purchasePrice,
+        totalPrice: item.totalPrice
+      })),
       shippingDetails,
       subtotal,
       shipping,
@@ -139,7 +155,13 @@ router.post('/create', auth, upload.single('paymentScreenshot'), async (req, res
         customerPhone: shippingDetails.phone,
         total: order.total,
         paymentMethod: order.paymentMethod,
-        products: validProducts,
+        products: validProducts.map(item => ({
+          product: item.product,
+          quantity: item.quantity,
+          size: item.size,
+          color: item.color,
+          totalPrice: item.totalPrice
+        })),
         shippingAddress: shippingAddress
       });
       
@@ -425,6 +447,57 @@ router.put('/:orderId/return', auth, async (req, res) => {
   } catch (error) {
     console.error('Error submitting return request:', error);
     res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Export orders to CSV (Admin only)
+router.get('/export/csv', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    const orders = await Order.find()
+      .populate('user', 'username email firstName lastName phone')
+      .populate('products.product', 'name price')
+      .sort({ createdAt: -1 });
+
+    const csvData = [];
+    
+    orders.forEach(order => {
+      order.products.forEach(item => {
+        csvData.push({
+          'Order ID': order._id.toString().slice(-8),
+          'Tracking ID': order._id.toString(),
+          'Order Date': new Date(order.createdAt).toLocaleDateString(),
+          'Customer Name': `${order.shippingDetails.firstName} ${order.shippingDetails.lastName}`,
+          'Customer Email': order.shippingDetails.email,
+          'Customer Phone': order.shippingDetails.phone,
+          'Product Name': item.product?.name || 'Unknown',
+          'Quantity': item.quantity,
+          'Size': item.size || '-',
+          'Color': item.color || '-',
+          'Product Price': item.purchasePrice,
+          'Total Price': item.totalPrice,
+          'Order Total': order.total,
+          'Payment Method': order.paymentMethod.toUpperCase(),
+          'Payment Status': order.paymentStatus,
+          'Order Status': order.status,
+          'Shipping Address': `${order.shippingDetails.address}, ${order.shippingDetails.city}, ${order.shippingDetails.state} ${order.shippingDetails.zipCode}`,
+          'Country': order.shippingDetails.country
+        });
+      });
+    });
+
+    const csv = Object.keys(csvData[0] || {}).join(',') + '\n' +
+      csvData.map(row => Object.values(row).map(val => `"${val}"`).join(',')).join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="orders-${new Date().toISOString().split('T')[0]}.csv"`);
+    res.send(csv);
+  } catch (error) {
+    console.error('Error exporting orders:', error);
+    res.status(500).json({ message: 'Failed to export orders' });
   }
 });
 

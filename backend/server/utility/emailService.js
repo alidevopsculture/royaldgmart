@@ -242,8 +242,9 @@ const sendAdminOrderNotification = async (orderDetails) => {
         <a href="https://royaldgmart.com/product-view/${item.product?._id}" style="color: #4F46E5; text-decoration: none;">${item.product?.name || 'Unknown Product'}</a>
       </td>
       <td style="padding: 8px; border-bottom: 1px solid #E5E7EB; text-align: center;">${item.quantity}</td>
+      <td style="padding: 8px; border-bottom: 1px solid #E5E7EB; text-align: center;">${item.size || '-'}</td>
+      <td style="padding: 8px; border-bottom: 1px solid #E5E7EB; text-align: center;">${item.color || '-'}</td>
       <td style="padding: 8px; border-bottom: 1px solid #E5E7EB; text-align: right;">₹${item.totalPrice}</td>
-      <td style="padding: 8px; border-bottom: 1px solid #E5E7EB; text-align: center;">${item.product?._id || 'N/A'}</td>
     </tr>
   `).join('');
 
@@ -272,8 +273,9 @@ const sendAdminOrderNotification = async (orderDetails) => {
             <tr style="background: #F3F4F6;">
               <th style="padding: 10px; text-align: left; border-bottom: 2px solid #E5E7EB;">Product</th>
               <th style="padding: 10px; text-align: center; border-bottom: 2px solid #E5E7EB;">Qty</th>
+              <th style="padding: 10px; text-align: center; border-bottom: 2px solid #E5E7EB;">Size</th>
+              <th style="padding: 10px; text-align: center; border-bottom: 2px solid #E5E7EB;">Color</th>
               <th style="padding: 10px; text-align: right; border-bottom: 2px solid #E5E7EB;">Price</th>
-              <th style="padding: 10px; text-align: center; border-bottom: 2px solid #E5E7EB;">Product ID</th>
             </tr>
           </thead>
           <tbody>
