@@ -24,7 +24,13 @@ function ImageContainer({setFiles,ind,image}:{setFiles:Dispatch<SetStateAction<F
       return;
     }
     setFile(file);
-    setFiles(prev=>[...prev,file])
+    
+    // Update the files array properly
+    setFiles(prev => {
+      const newFiles = [...prev];
+      newFiles[ind] = file;
+      return newFiles;
+    });
 }
 useEffect(() => {
     let fileReader: FileReader, isCancel = false;
@@ -58,15 +64,12 @@ useEffect(() => {
         onClick={(e)=>{
             e.preventDefault()
             e.stopPropagation()
-            console.log('Hello There')
-            setFiles(prev=>prev.filter((_e,index)=>{
-                // console.log(e)
-                // console.log(JSON.stringify(e.name)!==JSON.stringify(file?.name))
-                // return JSON.stringify(e.name)!==JSON.stringify(file?.name)
-                console.log(index!==ind)
-                return index!==ind
-            }))
-            // setFile(null)
+            setFiles(prev => {
+              const newFiles = [...prev];
+              newFiles[ind] = undefined as any; // Remove the file at this index
+              return newFiles.filter(f => f !== undefined); // Filter out undefined values
+            });
+            setFile(null)
             setFileDataURL('')
         }} size={20} className=' text-white p-1 rounded-full shadow-sm bg-black absolute top-0 right-0'/>}
     </div>

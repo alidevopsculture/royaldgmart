@@ -31,25 +31,22 @@ export default function OrderTracking() {
     
     setLoading(true)
     try {
-      const user = await getUserData()
-      if (!user) {
-        toast.error('Please login to track orders')
-        router.push('/auth')
-        return
-      }
-
-      const { fetchUserOrdersClient } = await import('@/actions/orders')
-      const result = await fetchUserOrdersClient()
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/track/${id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
       
-      if (result?.success && result.orders) {
-        const foundOrder = result.orders.find((o: any) => o._id === id || o._id.includes(id))
-        if (foundOrder) {
-          setOrder(foundOrder)
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success && result.order) {
+          setOrder(result.order)
         } else {
           toast.error('Order not found')
         }
       } else {
-        toast.error('Failed to fetch orders')
+        toast.error('Order not found')
       }
     } catch (error) {
       toast.error('Error tracking order')

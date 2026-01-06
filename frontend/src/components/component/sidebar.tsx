@@ -14,13 +14,14 @@ export default function Sidebar() {
     const menuItems = [
         { href: "/dashboard", label: "Dashboard" },
         { href: "/orders", label: "Orders" },
-        
+        { href: "/returns", label: "Returns" },
         { href: "/products", label: "Products" },
         { href: "/reviews", label: "Reviews" },
         { href: "/customers", label: "Customers" },
         { href: "/notifications", label: "Notifications" },
         { href: "/wholesale-admin", label: "Wholesale Products" },
         { href: "/wholesale-orders", label: "Wholesale Orders" },
+        { href: "/wholesale-returns", label: "Wholesale Returns" },
     ]
 
     return (

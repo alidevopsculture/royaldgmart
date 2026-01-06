@@ -66,16 +66,16 @@ export function Contact() {
           <div className="space-y-4">
             <div>
               <h3 className="text-lg font-medium">Address</h3>
-              <p className="text-muted-foreground">123 Main St, Anytown USA 12345</p>
+              <p className="text-muted-foreground">No- 3/1473, SEC-3, JANKIPURAM EXTENSION</p>
             </div>
             <div>
               <h3 className="text-lg font-medium">Phone</h3>
-              <p className="text-muted-foreground">+1 (555) 555-5555</p>
+              <p className="text-muted-foreground">+91 9236889570</p>
             </div>
             <div>
               <h3 className="text-lg font-medium">Email</h3>
-              <Link href="#" className="text-blue-600" prefetch={false}>
-                info@example.com
+              <Link href="mailto:royaldigitalmart@gmail.com" className="text-blue-600" prefetch={false}>
+                royaldigitalmart@gmail.com
               </Link>
             </div>
           </div>

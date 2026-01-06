@@ -15,3 +15,16 @@
 html, body {
   overflow-x: hidden;
 }
+
+/* Fix HTML entity encoding issues */
+* {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ensure proper character encoding for dropdown menus */
+[role="menu"], [role="menuitem"], [role="option"] {
+  font-feature-settings: "kern" 1;
+  text-rendering: optimizeLegibility;
+}

@@ -119,7 +119,7 @@ export default function Navbar() {
 
   // Bottom scrollable navigation categories
   const navCategories = [
-    "SAREE", "WHOLESALE","MEN SUITING SHIRTING","MEN COMBOS PACKS","WOMEN STICHED SUITS",
+    "WHOLESALE","SAREE","MEN SUITING SHIRTING","MEN COMBOS PACKS","WOMEN STICHED SUITS",
     "WOMEN UNSTICHED SUITS", "LEHNGAS", "WOMENS OTHERS", "BED SHEETS",
     "CURTAINS", "BLANKETS" , "MOSQUITO NETS"
   ];
@@ -147,7 +147,7 @@ export default function Navbar() {
     if (category === "MEN COMBOS PACKS") {
       return (
         <Link key={category} href="/men-combos-packs" prefetch={false}
-          className="mx-1 px-3 py-1 rounded-lg bg-amber-600 text-white font-bold"
+         className="mx-1 px-3 py-1 rounded-md hover:bg-gray-100 text-gray-800 font-semibold text-sm transition"
         >
           {category}
         </Link>
@@ -156,7 +156,7 @@ export default function Navbar() {
     if (category === "WHOLESALE") {
       return (
         <Link key={category} href="/wholesale" prefetch={false}
-          className="mx-1 px-3 py-1 rounded-lg bg-amber-600 text-white font-bold"
+          className="mx-1 px-3 py-1 rounded-lg bg-orange-600 text-white font-bold"
         >
           {category}
         </Link>
@@ -230,7 +230,7 @@ export default function Navbar() {
               <span className="sr-only">Home</span>
             </Link>
 
-            <a href="https://wa.me/917266849104" className="rounded-full hover:bg-green-100 p-2 transition" title="WhatsApp" target="_blank" rel="noopener noreferrer">
+            <a href="https://wa.me/919236889570" className="rounded-full hover:bg-green-100 p-2 transition" title="WhatsApp" target="_blank" rel="noopener noreferrer">
               <MessageCircle className="w-6 h-6 text-green-600" aria-hidden="true" />
               <span className="sr-only">WhatsApp</span>
             </a>
@@ -353,7 +353,7 @@ export default function Navbar() {
 
 
               <a 
-                href="https://wa.me/917266849104" 
+                href="https://wa.me/919236889570" 
                 className={`flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-all duration-200 group transform ${mobileMenuOpen ? 'translate-x-0 opacity-100' : '-translate-x-4 opacity-0'}`}
                 style={{ transitionDelay: mobileMenuOpen ? '150ms' : '0ms' }}
                 target="_blank" 

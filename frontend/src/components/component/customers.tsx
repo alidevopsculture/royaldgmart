@@ -32,6 +32,13 @@ export function Customers() {
 
   useEffect(() => {
     fetchCustomers();
+    
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(() => {
+      fetchCustomers();
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const fetchCustomers = async () => {
@@ -103,6 +110,16 @@ export function Customers() {
             <p className="text-gray-600 mt-1">Manage your customers</p>
           </div>
           <div className="text-right">
+            <div className="flex items-center gap-2 mb-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={fetchCustomers}
+                disabled={loading}
+              >
+                {loading ? 'Refreshing...' : 'Refresh'}
+              </Button>
+            </div>
             <div className="text-2xl font-semibold text-gray-900">{customers.length}</div>
             <div className="text-sm text-gray-500">Total Customers</div>
           </div>
@@ -217,7 +234,7 @@ export function Customers() {
                           </div>
                           <div>
                             <div className="font-medium text-gray-900">{customer.name}</div>
-                            <div className="text-sm text-gray-500">#{customer._id.slice(-6)}</div>
+                            <div className="text-sm text-gray-500">ID: {customer._id}</div>
                           </div>
                         </div>
                       </TableCell>

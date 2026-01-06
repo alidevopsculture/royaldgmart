@@ -37,12 +37,14 @@ import { Inputfile } from "./inputfile"
 import Image from "next/image"
 import ImageContainer from "../functional/ImageContainer"
 import { createProduct } from "@/actions/product"
-import SizeAndColor from "../functional/SizeAndColor"
+import SizeSelection from "../functional/SizeSelection"
+import ColorSelection from "../functional/ColorSelection"
 import { productDataPosting } from "@/types/product"
 import { Slider } from "@/components/ui/slider"
 import toast, { Toaster } from "react-hot-toast"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu"
+
 import { useRouter } from "next/navigation"
+import { cleanDropdownText } from "@/lib/text-utils"
 
 
 export type SizersAndColorsType ={
@@ -63,8 +65,15 @@ export type OtherDataType={
   shippingCharges:number
 }
 
+interface ColorOption {
+  color: string
+  combination_price: number
+}
+
 export function Createproduct() {
   const [sizesAndColors,setSizesAndColors]=useState<SizersAndColorsType[]>([])
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([])
+  const [selectedColors, setSelectedColors] = useState<ColorOption[]>([])
   const [images,setImages]=useState<File[]>([])
   const [otherData,setOtherData]=useState<OtherDataType>({
     name: '',
@@ -83,7 +92,6 @@ export function Createproduct() {
       careInstruction: '',
     },
   })
-  const [selectedSizes,setSelectedSizes]=useState<Array<string>>([])
   const [isSubmiting,setIsSubmiting]=useState(false)
   const router = useRouter();
 
@@ -104,8 +112,8 @@ export function Createproduct() {
   
   const createNewProduct=async ()=>{
 
-    if(!otherData.name || !otherData.price || sizesAndColors.length === 0 || images.length === 0){
-      return toast.error('Please fill the required fields: Product Name, Price, Size, and at least one Image.', { duration: 5000 });
+    if(!otherData.name || !otherData.price || !otherData.category || images.length === 0){
+      return toast.error('Please fill all required fields: Product Name, Price, Category, and at least one Image.', { duration: 5000 });
     }
 
     // Validate numeric inputs before submission
@@ -118,22 +126,34 @@ export function Createproduct() {
       new Promise(async (resolve, reject) => {
         setIsSubmiting(true);
         try {
+          // Create availableSizesColors from separate size and color selections
+          const availableSizesColors = selectedSizes.length > 0 
+            ? selectedSizes.map(size => ({
+                size,
+                colors: selectedColors,
+                stockQuantity: otherData.stockQuantity || 0
+              }))
+            : [{
+                size: 'One Size',
+                colors: selectedColors,
+                stockQuantity: otherData.stockQuantity || 0
+              }]
+
           const data: productDataPosting = {
             name: otherData.name,
             description: otherData.description || '',
             price: otherData.price,
             discountPercentage: otherData.productDiscount > 0 ? otherData.productDiscount : 0,
-            category: otherData.category || 'Uncategorized',
+            category: otherData.category,
             stockQuantity: otherData.stockQuantity || 0,
-            availableSizesColors: JSON.stringify(sizesAndColors.map(item => ({
-              ...item,
-              stockQuantity: item.stockQuantity || otherData.stockQuantity || 0
-            }))),
+            availableSizesColors: JSON.stringify(availableSizesColors),
             isAvailable: true,
             product_specification: otherData.product_specification || {},
             carousel: otherData.carousel || false,
             most_selling_product: otherData.most_selling_product || false,
             isNew: otherData.isNew || false,
+            taxRate: otherData.taxPercentage,
+            shippingCharges: otherData.shippingCharges,
           };
 
           const formData = new FormData();
@@ -142,27 +162,15 @@ export function Createproduct() {
             formData.append('images[]', file, file.name);
           }
           
-          // Get token from cookie
-          const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
-          
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products`, {
-            method: 'POST',
-            credentials: 'include',
-            headers: {
-              'Authorization': `Bearer ${token}`
-            },
-            body: formData,
-          });
-          if (!response.ok) {
-            throw new Error('Failed to create product');
-          }
+          const result = await createProduct(formData);
           resolve('Product created successfully!');
-          // Redirect and refresh products list
+          // Trigger product list refresh
+          window.dispatchEvent(new Event('productUpdated'));
           router.push('/products');
           router.refresh();
         } catch (error) {
           console.error('Error creating product:', error);
-          reject('Failed to create product.');
+          reject(error instanceof Error ? error.message : 'Failed to create product.');
         } finally {
           setIsSubmiting(false);
         }
@@ -189,27 +197,19 @@ export function Createproduct() {
           </div>
 
           <div className="grid gap-2">
-          <Label htmlFor="description">Category</Label>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                {/* <ListOrderedIcon className="h-4 w-4 mr-2" /> */}
-                {otherData.category!='' ? otherData.category: 'Select Category'}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64">
-              <DropdownMenuLabel>Category</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuRadioGroup onValueChange={(e)=>setOtherData({...otherData,category:e})} >
-                {categories.map((item)=>{
-                  return(
-                    <DropdownMenuRadioItem key={item} value={item}>{item}</DropdownMenuRadioItem>
-                  )
-                })}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            <Label htmlFor="category">Category</Label>
+            <Select value={otherData.category} onValueChange={(value) => setOtherData({...otherData, category: value})}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select Category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {cleanDropdownText(item)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid grid-cols-2 gap-6">
@@ -241,11 +241,22 @@ export function Createproduct() {
               
             </div>
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="size">Available Size and color *</Label>
-            <SizeAndColor 
-            setSizesAndColors={setSizesAndColors} sizesAndColors={sizesAndColors}
-            selectedSizes={selectedSizes} setSelectedSizes={setSelectedSizes}/>
+          <div className="grid gap-4">
+            <div className="grid gap-2">
+              <Label>Available Sizes (Optional)</Label>
+              <SizeSelection 
+                selectedSizes={selectedSizes} 
+                setSelectedSizes={setSelectedSizes}
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label>Available Colors (Optional)</Label>
+              <ColorSelection 
+                selectedColors={selectedColors} 
+                setSelectedColors={setSelectedColors}
+              />
+            </div>
           </div>
           
           {/* Marketing Options */}

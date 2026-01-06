@@ -8,6 +8,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import Image from "next/image"
 import toast from "react-hot-toast"
+import { cleanDropdownText } from "@/lib/text-utils"
 
 export function WholesaleOrders() {
   const [search, setSearch] = useState("")
@@ -305,6 +306,42 @@ export function WholesaleOrders() {
           </div>
           <div className="flex items-center gap-4">
             <Button 
+              onClick={async () => {
+                try {
+                  const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
+                  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/wholesale-orders/export/csv`, {
+                    method: 'GET',
+                    headers: {
+                      'Authorization': `Bearer ${token}`,
+                      'Content-Type': 'application/json'
+                    },
+                    credentials: 'include'
+                  });
+                  
+                  if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `wholesale-orders-${new Date().toISOString().split('T')[0]}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                  } else {
+                    toast.error('Failed to export wholesale orders');
+                  }
+                } catch (error) {
+                  toast.error('Export failed');
+                }
+              }}
+              variant="outline"
+              size="sm"
+              className="bg-green-600 text-white hover:bg-green-700"
+            >
+              📊 Export CSV
+            </Button>
+            <Button 
               onClick={fetchOrders}
               variant="outline"
               size="sm"
@@ -346,49 +383,49 @@ export function WholesaleOrders() {
                 </Button>
               </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48 bg-white/95 backdrop-blur-xl border-white/20">
-                  <DropdownMenuLabel>Filter by status</DropdownMenuLabel>
+                  <DropdownMenuLabel>{cleanDropdownText('Filter by status')}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuCheckboxItem
                     checked={selectedStatus === "all"}
                     onCheckedChange={() => setSelectedStatus("all")}
                   >
-                    All
+                    {cleanDropdownText('All')}
                   </DropdownMenuCheckboxItem>
                   <DropdownMenuCheckboxItem
                     checked={selectedStatus === "pending"}
                     onCheckedChange={() => setSelectedStatus("pending")}
                   >
-                    Pending
+                    {cleanDropdownText('Pending')}
                   </DropdownMenuCheckboxItem>
                   <DropdownMenuCheckboxItem
                     checked={selectedStatus === "confirmed"}
                     onCheckedChange={() => setSelectedStatus("confirmed")}
                   >
-                    Confirmed
+                    {cleanDropdownText('Confirmed')}
                   </DropdownMenuCheckboxItem>
                   <DropdownMenuCheckboxItem
                     checked={selectedStatus === "shipped"}
                     onCheckedChange={() => setSelectedStatus("shipped")}
                   >
-                    Shipped
+                    {cleanDropdownText('Shipped')}
                   </DropdownMenuCheckboxItem>
                   <DropdownMenuCheckboxItem
                     checked={selectedStatus === "delivered"}
                     onCheckedChange={() => setSelectedStatus("delivered")}
                   >
-                    Delivered
+                    {cleanDropdownText('Delivered')}
                   </DropdownMenuCheckboxItem>
                   <DropdownMenuCheckboxItem
                     checked={selectedStatus === "cancelled"}
                     onCheckedChange={() => setSelectedStatus("cancelled")}
                   >
-                    Cancelled
+                    {cleanDropdownText('Cancelled')}
                   </DropdownMenuCheckboxItem>
                   <DropdownMenuCheckboxItem
                     checked={selectedStatus === "returned"}
                     onCheckedChange={() => setSelectedStatus("returned")}
                   >
-                    Returned
+                    {cleanDropdownText('Returned')}
                   </DropdownMenuCheckboxItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -432,6 +469,7 @@ export function WholesaleOrders() {
                         <span className="ml-2">{sortDirection === "asc" ? "↑" : "↓"}</span>
                       )}
                     </TableHead>
+                    <TableHead className="hidden lg:table-cell font-semibold text-gray-700">Quantity</TableHead>
                     <TableHead className="hidden lg:table-cell font-semibold text-gray-700">Payment</TableHead>
                     <TableHead className="font-semibold text-gray-700">Status</TableHead>
                     <TableHead className="hidden xl:table-cell font-semibold text-gray-700">Cancel/Return</TableHead>
@@ -463,6 +501,15 @@ export function WholesaleOrders() {
                               -{order.discount}% discount
                             </div>
                           )}
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          <div className="text-sm text-gray-700">
+                            {order.products?.map((item: any, index: number) => (
+                              <div key={index} className="mb-1">
+                                {item.quantity || 1}
+                              </div>
+                            ))}
+                          </div>
                         </TableCell>
                         <TableCell className="hidden lg:table-cell">
                           <div className="space-y-1">
@@ -575,15 +622,15 @@ export function WholesaleOrders() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent>
-                                <DropdownMenuLabel>Update Status</DropdownMenuLabel>
+                                <DropdownMenuLabel>{cleanDropdownText('Update Status')}</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'pending')}>Pending</DropdownMenuCheckboxItem>
-                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'confirmed')}>Confirmed</DropdownMenuCheckboxItem>
-                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'shipped')}>Shipped</DropdownMenuCheckboxItem>
-                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'delivered')}>Delivered</DropdownMenuCheckboxItem>
-                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'return_approved')}>Return Approved</DropdownMenuCheckboxItem>
-                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'return_initiated')}>Return Initiated</DropdownMenuCheckboxItem>
-                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'rejected')}>Rejected</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'pending')}>{cleanDropdownText('Pending')}</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'confirmed')}>{cleanDropdownText('Confirmed')}</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'shipped')}>{cleanDropdownText('Shipped')}</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'delivered')}>{cleanDropdownText('Delivered')}</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'return_approved')}>{cleanDropdownText('Return Approved')}</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'return_initiated')}>{cleanDropdownText('Return Initiated')}</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem onClick={() => handleStatusUpdate(order._id, 'rejected')}>{cleanDropdownText('Rejected')}</DropdownMenuCheckboxItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                             <Button 
@@ -600,7 +647,7 @@ export function WholesaleOrders() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-12">
+                      <TableCell colSpan={9} className="text-center py-12">
                         <p className="text-gray-500">No wholesale orders found</p>
                       </TableCell>
                     </TableRow>

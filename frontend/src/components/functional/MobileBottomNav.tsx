@@ -34,10 +34,20 @@ export default function MobileBottomNav() {
         item.product && item.product.category === 'WHOLESALE'
       ).reduce((total: number, item: any) => total + (item.quantity || 0), 0) || 0
       setWholesaleCartItemCount(wholesaleCount)
-      
     }
     
     loadData()
+    
+    // Listen for cart updates
+    const handleCartUpdate = () => {
+      loadData()
+    }
+    
+    window.addEventListener('cartUpdated', handleCartUpdate)
+    
+    return () => {
+      window.removeEventListener('cartUpdated', handleCartUpdate)
+    }
   }, [])
 
   const navItems = [

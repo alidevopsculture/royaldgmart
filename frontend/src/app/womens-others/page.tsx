@@ -12,7 +12,7 @@ export default function WomensOthers() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products?category=womens-others`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products?category=WOMENS OTHERS`);
         if (!response.ok) throw new Error('Failed to fetch products');
         const data = await response.json();
         setProducts(data.products || data || []);
@@ -39,7 +39,7 @@ export default function WomensOthers() {
   return (
     <>
       
-      <section className="relative w-full h-[320px] md:h-[400px] flex items-center justify-center mb-8 overflow-hidden">
+      <section className="relative w-full h-[520px] md:h-[600px] flex items-center justify-center mb-8 overflow-hidden">
         <Image src="/banners/landscape-05.png" alt="Womens Others Banner" fill priority className="object-cover opacity-100" />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center z-10">
           <h1 className="text-4xl md:text-5xl font-extrabold text-white drop-shadow mb-4">Women's Collection</h1>
@@ -63,12 +63,10 @@ export default function WomensOthers() {
           </ol>
         </nav>
         <section id="products">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
             {products && products.length > 0 ? (
               products.map((product) => (
-                <div key={product._id} className="flex justify-center">
-                  <ProductCard product={product} />
-                </div>
+                <ProductCard key={product._id} product={product} />
               ))
             ) : (
               <div className="col-span-full text-center py-12">

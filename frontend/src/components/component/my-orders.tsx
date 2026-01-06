@@ -159,7 +159,14 @@ export function MyOrders() {
         }
       }
       
-      const updatedOrders = ordersData.map((order: any) => {
+      // Filter only wholesale orders
+      const wholesaleOrders = ordersData.filter((order: any) => 
+        order.products?.some((item: any) => 
+          item.product?.category === 'WHOLESALE'
+        )
+      )
+      
+      const updatedOrders = wholesaleOrders.map((order: any) => {
         const update = orderUpdates[order._id]
         if (update) {
           return {
@@ -174,7 +181,7 @@ export function MyOrders() {
       
       setOrders(updatedOrders)
       if (updatedOrders.length > 0) {
-        localStorage.setItem('userOrders', JSON.stringify(updatedOrders))
+        localStorage.setItem('userWholesaleOrders', JSON.stringify(updatedOrders))
       }
     } catch (error) {
       console.error('Error loading orders:', error)
@@ -226,9 +233,13 @@ export function MyOrders() {
       if (deleteSync) {
         const { orderId, type, action } = JSON.parse(deleteSync)
         if (type === 'regular' && action === 'delete') {
-          setOrders(prev => prev.filter(order => order._id !== orderId))
+          setOrders(prev => {
+            const filtered = prev.filter(order => order._id !== orderId)
+            // Update localStorage with filtered orders
+            localStorage.setItem('userOrders', JSON.stringify(filtered))
+            return filtered
+          })
           localStorage.removeItem('adminDeleteSync')
-          localStorage.removeItem('userOrders')
           toast.success('Order deleted by admin')
         }
       }
@@ -289,12 +300,12 @@ export function MyOrders() {
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-semibold text-gray-900 mb-2">My Orders</h1>
-          <p className="text-gray-600">Track and manage your orders</p>
+          <h1 className="text-3xl font-semibold text-gray-900 mb-2">Wholesale Orders</h1>
+          <p className="text-gray-600">Track and manage your wholesale orders</p>
           <div className="mt-4">
-            <Link href="/my-orders/wholesale-order">
+            <Link href="/profile">
               <Button variant="outline" className="mr-4">
-                View Wholesale Orders
+                View Regular Orders
               </Button>
             </Link>
           </div>
@@ -308,7 +319,7 @@ export function MyOrders() {
               <div className="flex justify-between items-center">
                 <h3 className="text-xl font-semibold text-gray-900 flex items-center">
                   <Package className="w-5 h-5 mr-2 text-indigo-600" />
-                  Order History
+                  Wholesale Order History
                 </h3>
                 <Button 
                   onClick={loadOrders}
@@ -336,8 +347,8 @@ export function MyOrders() {
               ) : orders.length === 0 ? (
                 <div className="text-center py-12">
                   <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500 text-lg">No orders yet</p>
-                  <p className="text-gray-400">Start shopping to see your orders here</p>
+                  <p className="text-gray-500 text-lg">No wholesale orders yet</p>
+                  <p className="text-gray-400">Start shopping wholesale to see your orders here</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -436,7 +447,10 @@ export function MyOrders() {
                               
                               fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${id}/cancel`, {
                                 method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
+                                headers: { 
+                                  'Content-Type': 'application/json',
+                                  'Authorization': `Bearer ${document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1] || ''}`
+                                },
                                 credentials: 'include',
                                 body: JSON.stringify({ cancelReason: reason })
                               }).catch(() => console.log('Backend sync failed'))
@@ -444,30 +458,38 @@ export function MyOrders() {
                           />
                         )}
                         
-                        {(order.status === 'delivered' || order.status === 'shipped') && (
+                        {(order.status === 'delivered' || order.status === 'shipped' || order.status === 'confirmed') && (
                           <ReturnOrderDialog 
                             orderId={order._id} 
                             orderType="regular" 
                             onSuccess={() => {}}
                             onLocalUpdate={(id, status, reason) => {
-                              const newUpdates = { ...orderUpdates, [id]: { status, reason } }
+                              const newUpdates = { ...orderUpdates, [id]: { status: 'return_initiated', reason } }
                               setOrderUpdates(newUpdates)
                               localStorage.setItem('orderUpdates', JSON.stringify(newUpdates))
                               
                               setOrders(prev => {
                                 const updated = prev.map(o => 
-                                  o._id === id ? { ...o, status, returnReason: reason } : o
+                                  o._id === id ? { ...o, status: 'return_initiated', returnReason: reason } : o
                                 )
                                 localStorage.setItem('userOrders', JSON.stringify(updated))
-                                localStorage.setItem('adminOrdersSync', JSON.stringify({ timestamp: Date.now(), orderId: id, status, reason, type: 'regular' }))
+                                localStorage.setItem('adminOrdersSync', JSON.stringify({ timestamp: Date.now(), orderId: id, status: 'return_initiated', reason, type: 'regular' }))
                                 return updated
                               })
                               
                               fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${id}/return`, {
                                 method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
+                                headers: { 
+                                  'Content-Type': 'application/json',
+                                  'Authorization': `Bearer ${document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1] || ''}`
+                                },
                                 credentials: 'include',
                                 body: JSON.stringify({ returnReason: reason })
+                              }).then(response => {
+                                if (response.ok) {
+                                  // Force refresh of returns page
+                                  window.dispatchEvent(new CustomEvent('returnRequestSubmitted', { detail: { orderId: id } }))
+                                }
                               }).catch(() => console.log('Backend sync failed'))
                             }}
                           />

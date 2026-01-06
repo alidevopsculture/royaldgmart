@@ -128,7 +128,7 @@ export function ModalForColorAndPrice({size,selectedSizes,setSelectedSizes,setSi
           <DialogTrigger asChild>
             <Button type="submit" 
             onClick={handleSubmit}
-            disabled={colorPrices.map((item)=> Object.values(item)).find((item,ind)=>item.includes(''))?.includes("")}>Save</Button>
+            disabled={colorPrices.some(item => !item.color || item.combination_price <= 0)}>Save</Button>
           </DialogTrigger>
         </DialogFooter>
       </DialogContent>

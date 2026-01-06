@@ -79,6 +79,9 @@ const productDataPost=z.object({
         careInstruction: z.string(),
         // dimensions: z.string(),
     }).optional(),
+    
+    taxRate: z.number().min(0).max(100).optional(),
+    shippingCharges: z.number().min(0).optional(),
 })
 
 const individualProduct= z.object({

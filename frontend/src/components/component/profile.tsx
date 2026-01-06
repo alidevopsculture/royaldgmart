@@ -1,138 +1,40 @@
 "use client"
 
-import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { JSX, SVGProps, useEffect, useState } from "react"
+import { Label } from "@/components/ui/label"
+import { useEffect, useState } from "react"
 import { getUserData, Logout } from "@/actions/auth"
-import { LogOut, User, Mail, Package, Calendar, IndianRupee, X, AlertTriangle } from "lucide-react"
+import { User, Edit, RefreshCw, AlertTriangle, Package, Calendar, IndianRupee, LogOut } from "lucide-react"
 import { useRouter } from "next/navigation"
 import toast from "react-hot-toast"
 import Image from "next/image"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import Link from "next/link"
 
-// Cancel Order Dialog Component
-function CancelOrderDialog({ orderId, orderType, onSuccess, onLocalUpdate }: { orderId: string, orderType: 'regular' | 'wholesale', onSuccess: () => void, onLocalUpdate?: (orderId: string, status: string, reason: string) => void }) {
-  const [open, setOpen] = useState(false)
-  const [reason, setReason] = useState('')
-
-  const handleCancel = () => {
-    if (!reason.trim()) {
-      toast.error('Please provide a reason for cancellation')
-      return
-    }
-
-    // Update local state immediately
-    if (onLocalUpdate) {
-      onLocalUpdate(orderId, 'cancelled', reason)
-    }
-    
-    toast.success('Order cancelled successfully')
-    setOpen(false)
-    setReason('')
-    onSuccess()
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50">
-          Cancel Order
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-red-500" />
-            Cancel Order
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600">Please provide a reason for cancelling this order:</p>
-          <Textarea
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="e.g., Changed my mind, Found better price elsewhere, etc."
-            rows={3}
-          />
-          <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              Keep Order
-            </Button>
-            <Button onClick={handleCancel} disabled={!reason.trim()} className="bg-red-600 hover:bg-red-700">
-              Cancel Order
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-// Return Order Dialog Component
-function ReturnOrderDialog({ orderId, orderType, onSuccess, onLocalUpdate }: { orderId: string, orderType: 'regular' | 'wholesale', onSuccess: () => void, onLocalUpdate?: (orderId: string, status: string, reason: string) => void }) {
-  const [open, setOpen] = useState(false)
-  const [reason, setReason] = useState('')
-
-  const handleReturn = () => {
-    if (!reason.trim()) {
-      toast.error('Please provide a reason for return')
-      return
-    }
-
-    // Update local state immediately
-    if (onLocalUpdate) {
-      onLocalUpdate(orderId, 'returned', reason)
-    }
-    
-    toast.success('Return request submitted successfully')
-    setOpen(false)
-    setReason('')
-    onSuccess()
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="text-blue-600 border-blue-200 hover:bg-blue-50">
-          Return Order
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Package className="w-5 h-5 text-blue-500" />
-            Return Order
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600">Please provide a reason for returning this order:</p>
-          <Textarea
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="e.g., Product damaged, Wrong size, Quality issues, etc."
-            rows={3}
-          />
-          <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleReturn} disabled={!reason.trim()} className="bg-blue-600 hover:bg-blue-700">
-              Submit Return Request
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
+interface Order {
+  _id: string;
+  orderId?: string;
+  total: number;
+  totalAmount?: number;
+  status: string;
+  paymentMethod: string;
+  createdAt: string;
+  products: Array<{
+    product: {
+      name: string;
+      images: string[];
+    };
+    quantity: number;
+    size?: string;
+  }>;
 }
 
 export function Profile() {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [orders, setOrders] = useState<Order[]>([])
+  const [ordersLoading, setOrdersLoading] = useState(false)
+  const [editMode, setEditMode] = useState(false)
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -141,43 +43,63 @@ export function Profile() {
     lastName: '',
     address: '',
     city: '',
+    state: '',
     zipCode: '',
     country: ''
   })
   const router = useRouter()
 
-
-
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const timer = setTimeout(() => {
+      loadUser();
+    }, 100);
+    
     const loadUser = async () => {
       try {
-        // First check if user is authenticated
         const userData = await getUserData()
         if (!userData) {
           router.push('/auth')
           return
         }
         
-        // Then fetch complete profile data
-        const { getUserProfile } = await import('@/actions/profile')
-        const profileResult = await getUserProfile()
-        
-        if (profileResult.success && profileResult.user) {
-          const fullUserData = profileResult.user
-          setUser(fullUserData)
-          setFormData({
-            username: fullUserData.username || '',
-            email: fullUserData.email || '',
-            phone: fullUserData.phone || '',
-            firstName: fullUserData.firstName || '',
-            lastName: fullUserData.lastName || '',
-            address: fullUserData.address || '',
-            city: fullUserData.city || '',
-            zipCode: fullUserData.zipCode || '',
-            country: fullUserData.country || ''
-          })
-        } else {
-          // Fallback to basic user data if profile fetch fails
+        try {
+          const { getUserProfileClient } = await import('@/actions/profile')
+          const profileResult = await getUserProfileClient()
+          
+          if (profileResult.success && profileResult.user) {
+            const fullUserData = profileResult.user
+            setUser(fullUserData)
+            setFormData({
+              username: fullUserData.username || '',
+              email: fullUserData.email || '',
+              phone: fullUserData.phone || '',
+              firstName: fullUserData.firstName || '',
+              lastName: fullUserData.lastName || '',
+              address: fullUserData.address || '',
+              city: fullUserData.city || '',
+              state: fullUserData.state || '',
+              zipCode: fullUserData.zipCode || '',
+              country: fullUserData.country || ''
+            })
+          } else {
+            setUser(userData)
+            setFormData({
+              username: userData.username || '',
+              email: userData.email || '',
+              phone: '',
+              firstName: '',
+              lastName: '',
+              address: '',
+              city: '',
+              state: '',
+              zipCode: '',
+              country: ''
+            })
+          }
+        } catch (profileError) {
+          console.log('Profile fetch error:', profileError);
           setUser(userData)
           setFormData({
             username: userData.username || '',
@@ -187,6 +109,7 @@ export function Profile() {
             lastName: '',
             address: '',
             city: '',
+            state: '',
             zipCode: '',
             country: ''
           })
@@ -200,10 +123,77 @@ export function Profile() {
       }
     }
     
-    loadUser()
-  }, [])
+    loadUser();
+    
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [router]);
 
+  const loadOrders = async () => {
+    try {
+      setOrdersLoading(true)
+      
+      let token
+      if (typeof window !== 'undefined') {
+        try {
+          token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1]
+        } catch (e) {
+          token = localStorage.getItem('token')
+        }
+      }
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/user`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        // Filter only regular orders (non-wholesale)
+        const regularOrders = (data.orders || []).filter((order: any) => 
+          !order.products?.some((item: any) => 
+            item.product?.category === 'WHOLESALE'
+          )
+        )
+        setOrders(regularOrders)
+      }
+    } catch (error) {
+      console.error('Error loading orders:', error)
+    } finally {
+      setOrdersLoading(false)
+    }
+  }
 
+  const handleEditMode = () => {
+    if (!editMode) {
+      // Load latest checkout data when entering edit mode
+      if (typeof window !== 'undefined') {
+        const cachedProfile = localStorage.getItem('userProfileCache')
+        if (cachedProfile) {
+          try {
+            const parsedProfile = JSON.parse(cachedProfile)
+            setFormData({
+              username: parsedProfile.username || formData.username,
+              email: parsedProfile.email || formData.email,
+              phone: parsedProfile.phone || '',
+              firstName: parsedProfile.firstName || '',
+              lastName: parsedProfile.lastName || '',
+              address: parsedProfile.address || '',
+              city: parsedProfile.city || '',
+              state: parsedProfile.state || '',
+              zipCode: parsedProfile.zipCode || '',
+              country: parsedProfile.country || 'India'
+            })
+          } catch (e) {
+            console.error('Failed to parse cached profile:', e)
+          }
+        }
+      }
+    }
+    setEditMode(!editMode)
+  }
 
   const handleLogout = async () => {
     try {
@@ -214,49 +204,107 @@ export function Profile() {
     }
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData(prev => ({
-      ...prev,
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newFormData = {
+      ...formData,
       [e.target.name]: e.target.value
-    }))
-  }
+    };
+    setFormData(newFormData);
+    
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('userProfileCache', JSON.stringify(newFormData));
+      window.dispatchEvent(new CustomEvent('profileUpdated', { detail: newFormData }));
+    }
+  };
 
   const handleSave = async () => {
     try {
-      const { updateProfile, getUserProfile } = await import('@/actions/profile')
-      const result = await updateProfile({
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        phone: formData.phone,
-        address: formData.address,
-        city: formData.city,
-        zipCode: formData.zipCode,
-        country: formData.country
+      setLoading(true)
+      
+      let token
+      if (typeof window !== 'undefined') {
+        try {
+          token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1]
+        } catch (e) {
+          token = localStorage.getItem('token')
+        }
+      }
+      
+      if (!token) {
+        toast.error('Please login again')
+        return
+      }
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phone: formData.phone,
+          address: formData.address,
+          city: formData.city,
+          zipCode: formData.zipCode,
+          country: formData.country,
+          state: formData.state
+        })
       })
       
-      if (result && result.success) {
-        toast.success('Profile updated successfully!')
+      const result = await response.json()
+      
+      if (result.success) {
+        setUser(result.user)
+        setFormData({
+          username: result.user.username || '',
+          email: result.user.email || '',
+          phone: result.user.phone || '',
+          firstName: result.user.firstName || '',
+          lastName: result.user.lastName || '',
+          address: result.user.address || '',
+          city: result.user.city || '',
+          state: result.user.state || '',
+          zipCode: result.user.zipCode || '',
+          country: result.user.country || ''
+        })
         
-        // Refresh user data after successful update
-        const profileResult = await getUserProfile()
-        if (profileResult.success && profileResult.user) {
-          setUser(profileResult.user)
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('userProfileCache', JSON.stringify(result.user))
+          window.dispatchEvent(new CustomEvent('profileUpdated', { detail: result.user }))
         }
+        
+        setEditMode(false)
+        toast.success('Profile updated successfully!')
       } else {
-        toast.error(result?.error || 'Failed to update profile')
+        toast.error(result.error || 'Failed to update profile')
       }
     } catch (error) {
       console.error('Error updating profile:', error)
       toast.error('Error updating profile')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'pending': return 'bg-yellow-100 text-yellow-800'
+      case 'processing': return 'bg-blue-100 text-blue-800'
+      case 'shipped': return 'bg-purple-100 text-purple-800'
+      case 'delivered': return 'bg-green-100 text-green-800'
+      case 'cancelled': return 'bg-red-100 text-red-800'
+      default: return 'bg-gray-100 text-gray-800'
     }
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="relative">
-          <div className="w-20 h-20 border-4 border-indigo-200 rounded-full animate-spin border-t-indigo-600"></div>
-          <div className="absolute inset-0 w-20 h-20 border-4 border-transparent rounded-full animate-ping border-t-indigo-400"></div>
+          <div className="w-12 h-12 border-4 border-orange-200 rounded-full animate-spin border-t-orange-600 shadow-lg"></div>
+          <div className="absolute inset-0 w-12 h-12 border-4 border-transparent rounded-full animate-ping border-t-orange-400 opacity-75"></div>
         </div>
       </div>
     )
@@ -268,22 +316,26 @@ export function Profile() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
-            <User className="w-8 h-8 text-gray-600" />
+      {/* Header */}
+      <div className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
+              <User className="w-8 h-8 text-gray-600" />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Welcome back, {formData.firstName || user.username}!
+            </h1>
+            <p className="text-gray-600">Manage your account and personal information</p>
           </div>
-          <h1 className="text-3xl font-semibold text-gray-900 mb-2">
-            Welcome back, {user.username}!
-          </h1>
-          <p className="text-gray-600">Manage your account and personal information</p>
         </div>
+      </div>
 
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Profile Header */}
-        <div className="bg-white border border-gray-200 rounded-lg mb-8">
+        <div className="bg-white rounded-lg shadow-sm border mb-8">
           <div className="px-6 py-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center space-x-4">
                 <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
                   <User className="w-6 h-6 text-gray-600" />
@@ -293,13 +345,28 @@ export function Profile() {
                   <p className="text-gray-500">{user.role === 'admin' ? 'Administrator' : 'Customer'}</p>
                 </div>
               </div>
-              <Button 
-                onClick={handleLogout}
-                variant="outline"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button 
+                  onClick={handleEditMode}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <Edit className="w-4 h-4" />
+                  {editMode ? 'Cancel Edit' : 'Edit Profile & Address'}
+                </Button>
+                <Link href="/my-orders">
+                  <Button variant="outline" className="flex items-center gap-2">
+                    View Wholesale Orders
+                  </Button>
+                </Link>
+                <Button 
+                  onClick={handleLogout}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  Logout
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -307,11 +374,7 @@ export function Profile() {
         {/* Important Note */}
         <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg mb-8">
           <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-            </div>
+            <AlertTriangle className="h-5 w-5 text-amber-400 flex-shrink-0" />
             <div className="ml-3">
               <p className="text-sm text-amber-700">
                 <strong>Important:</strong> Please fill in all your details correctly. This information will be used for checkout and order delivery.
@@ -320,157 +383,222 @@ export function Profile() {
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="mb-8">
-          <Link href="/my-orders">
-            <Button className="bg-indigo-600 hover:bg-indigo-700 text-white">
-              <Package className="w-4 h-4 mr-2" />
-              My Orders
-            </Button>
-          </Link>
-        </div>
-
-        {/* Profile Content */}
-        <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-8">
-                    {/* Personal Information */}
-                    <div className="space-y-6">
-                      <div>
-                        <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                          <User className="w-5 h-5 mr-2 text-indigo-600" />
-                          Personal Information
-                        </h3>
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">First Name *</Label>
-                              <Input
-                                id="firstName"
-                                name="firstName"
-                                value={formData.firstName}
-                                onChange={handleInputChange}
-                                className="mt-1 bg-white/50 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
-                              />
-                            </div>
-                            <div>
-                              <Label htmlFor="lastName" className="text-sm font-medium text-gray-700">Last Name *</Label>
-                              <Input
-                                id="lastName"
-                                name="lastName"
-                                value={formData.lastName}
-                                onChange={handleInputChange}
-                                className="mt-1 bg-white/50 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
-                              />
-                            </div>
-                          </div>
-                          <div>
-                            <Label htmlFor="username" className="text-sm font-medium text-gray-700">Username *</Label>
-                            <Input
-                              id="username"
-                              name="username"
-                              value={formData.username}
-                              onChange={handleInputChange}
-                              className="mt-1 bg-white/50 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="email" className="text-sm font-medium text-gray-700">Email Address *</Label>
-                            <Input
-                              id="email"
-                              name="email"
-                              type="email"
-                              value={formData.email}
-                              onChange={handleInputChange}
-                              className="mt-1 bg-white/50 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="phone" className="text-sm font-medium text-gray-700">Phone Number *</Label>
-                            <Input
-                              id="phone"
-                              name="phone"
-                              type="tel"
-                              value={formData.phone}
-                              onChange={handleInputChange}
-                              className="mt-1 bg-white/50 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Address Information */}
-                    <div className="space-y-6">
-                      <div>
-                        <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                          <Mail className="w-5 h-5 mr-2 text-indigo-600" />
-                          Address Information
-                        </h3>
-                        <div className="space-y-4">
-                          <div>
-                            <Label htmlFor="address" className="text-sm font-medium text-gray-700">Street Address *</Label>
-                            <Textarea
-                              id="address"
-                              name="address"
-                              value={formData.address}
-                              onChange={handleInputChange}
-                              className="mt-1 bg-white/50 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
-                              rows={3}
-                            />
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <Label htmlFor="city" className="text-sm font-medium text-gray-700">City *</Label>
-                              <Input
-                                id="city"
-                                name="city"
-                                value={formData.city}
-                                onChange={handleInputChange}
-                                className="mt-1 bg-white/50 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
-                              />
-                            </div>
-                            <div>
-                              <Label htmlFor="zipCode" className="text-sm font-medium text-gray-700">ZIP Code *</Label>
-                              <Input
-                                id="zipCode"
-                                name="zipCode"
-                                value={formData.zipCode}
-                                onChange={handleInputChange}
-                                className="mt-1 bg-white/50 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
-                              />
-                            </div>
-                          </div>
-                          <div>
-                            <Label htmlFor="country" className="text-sm font-medium text-gray-700">Country *</Label>
-                            <Input
-                              id="country"
-                              name="country"
-                              value={formData.country}
-                              onChange={handleInputChange}
-                              className="mt-1 bg-white/50 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <div className="flex justify-end space-x-4">
-              <Button 
-                variant="outline" 
-                className="px-6 py-2 border-gray-300 text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleSave}
-                className="px-8 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
-              >
-                Save Changes
-              </Button>
+        {/* Profile Form */}
+        {editMode && (
+          <div className="bg-white rounded-lg shadow-sm border mb-8">
+            <div className="px-6 py-4 border-b">
+              <h3 className="text-lg font-semibold text-gray-900">Edit Profile Information</h3>
             </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h4 className="font-medium text-gray-900">Personal Information</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="firstName">First Name *</Label>
+                      <Input
+                        id="firstName"
+                        name="firstName"
+                        value={formData.firstName}
+                        onChange={handleInputChange}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="lastName">Last Name *</Label>
+                      <Input
+                        id="lastName"
+                        name="lastName"
+                        value={formData.lastName}
+                        onChange={handleInputChange}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="phone">Phone Number *</Label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="font-medium text-gray-900">Address Information</h4>
+                  <div>
+                    <Label htmlFor="address">Street Address *</Label>
+                    <Input
+                      id="address"
+                      name="address"
+                      value={formData.address}
+                      onChange={handleInputChange}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="city">City *</Label>
+                      <Input
+                        id="city"
+                        name="city"
+                        value={formData.city}
+                        onChange={handleInputChange}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="state">State</Label>
+                      <Input
+                        id="state"
+                        name="state"
+                        value={formData.state}
+                        onChange={handleInputChange}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="zipCode">ZIP Code *</Label>
+                      <Input
+                        id="zipCode"
+                        name="zipCode"
+                        value={formData.zipCode}
+                        onChange={handleInputChange}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="country">Country *</Label>
+                      <Input
+                        id="country"
+                        name="country"
+                        value={formData.country}
+                        onChange={handleInputChange}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-6 flex justify-end">
+                <Button 
+                  onClick={handleSave}
+                  className="bg-orange-600 hover:bg-orange-700 text-white"
+                >
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Order History */}
+        <div className="bg-white rounded-lg shadow-sm border">
+          <div className="px-6 py-4 border-b flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Package className="w-5 h-5 text-blue-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Order History</h3>
+            </div>
+            <Button 
+              onClick={loadOrders}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${ordersLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
+          
+          <div className="p-6">
+            {!orders.length && !ordersLoading ? (
+              <div className="text-center py-8">
+                <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500">No orders found</p>
+                <Button onClick={loadOrders} className="mt-4">
+                  Load Orders
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {orders.map((order) => (
+                  <div key={order._id} className="border rounded-lg p-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                      <div>
+                        <h4 className="font-semibold text-gray-900">Order #{order.orderId || order._id.slice(-8)}</h4>
+                        <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                          <Calendar className="w-4 h-4" />
+                          {new Date(order.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <div className="font-semibold text-gray-900 flex items-center gap-1">
+                            <IndianRupee className="w-4 h-4" />
+                            {(order.total || order.totalAmount || 0).toFixed(2)}
+                          </div>
+                          <div className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                            {order.status}
+                          </div>
+                        </div>
+                        <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          order.paymentMethod === 'cod' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {order.paymentMethod === 'cod' ? 'COD' : 'Online'}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {order.products && order.products.length > 0 && (
+                      <div className="flex items-center gap-3">
+                        <div className="relative w-12 h-12 bg-gray-200 rounded-md overflow-hidden flex-shrink-0">
+                          {order.products[0].product?.images?.[0] && (
+                            <Image
+                              src={order.products[0].product.images[0]}
+                              alt={order.products[0].product.name}
+                              fill
+                              className="object-cover"
+                            />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900">{order.products[0].product.name}</p>
+                          <p className="text-sm text-gray-600">
+                            Qty: {order.products[0].quantity}
+                            {order.products[0].size && ` • Size: ${order.products[0].size}`}
+                            {order.products.length > 1 && ` • +${order.products.length - 1} more items`}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="mt-4 pt-4 border-t">
+                      <div className="flex justify-center">
+                        <div className="w-full max-w-md">
+                          <div className="bg-gray-100 rounded-lg px-4 py-2 text-center">
+                            <span className="text-sm font-medium text-gray-700">Shipping</span>
+                          </div>
+                        </div>
+                      </div>
+                      {order.status === 'pending' && (
+                        <div className="text-center mt-3">
+                          <button className="text-red-600 hover:text-red-700 text-sm font-medium">
+                            Cancel Order
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { ShoppingBag, User, CreditCard, MapPin, Phone, Mail, Truck, Banknote } from 'lucide-react';
 import { getUserData } from '@/actions/auth';
 import { getAllCarts } from '@/actions/cart';
+import { createRazorpayOrderClient, verifyRazorpayPaymentClient } from '@/actions/payment-client';
 import { getCartIdentifier, hasCartItems } from '@/lib/cart-utils';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
@@ -34,12 +35,12 @@ export default function WholesaleCheckout() {
     country: 'India'
   });
   const [paymentMethod, setPaymentMethod] = useState('cod');
-  const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
-  const [upiIdCopied, setUpiIdCopied] = useState(false);
-  const [showUpiDetails, setShowUpiDetails] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
+    // Ensure we're on the client side
+    if (typeof window === 'undefined') return;
+    
     const initializeCheckout = async () => {
       try {
         setLoading(true);
@@ -52,17 +53,34 @@ export default function WholesaleCheckout() {
         }
         
         // Fetch complete profile data
-        const { getUserProfile } = await import('@/actions/profile');
-        const profileResult = await getUserProfile();
+        const { getUserProfileClient } = await import('@/actions/profile');
+        const profileResult = await getUserProfileClient();
         
         let fullUserData = userData;
-        if (profileResult.success && profileResult.user) {
-          fullUserData = profileResult.user;
+        if (profileResult && profileResult.success && profileResult.user) {
+          fullUserData = { ...userData, ...profileResult.user };
+          console.log('Wholesale profile data loaded:', profileResult.user);
+          // Cache the profile data
+          localStorage.setItem('userProfileCache', JSON.stringify(profileResult.user));
+        } else {
+          console.log('Wholesale profile fetch failed:', profileResult?.error);
+          // Try to use cached profile data
+          const cachedProfile = localStorage.getItem('userProfileCache');
+          if (cachedProfile) {
+            try {
+              const parsedProfile = JSON.parse(cachedProfile);
+              fullUserData = { ...userData, ...parsedProfile };
+              console.log('Using cached wholesale profile data:', parsedProfile);
+            } catch (e) {
+              console.error('Failed to parse cached profile:', e);
+            }
+          }
         }
         
         setUser(fullUserData);
-        setFormData(prev => ({
-          ...prev,
+        
+        // Always populate form with available data
+        const newFormData = {
           firstName: fullUserData.firstName || '',
           lastName: fullUserData.lastName || '',
           email: fullUserData.email || '',
@@ -72,17 +90,37 @@ export default function WholesaleCheckout() {
           state: fullUserData.state || '',
           zipCode: fullUserData.zipCode || '',
           country: fullUserData.country || 'India'
-        }));
+        };
+        
+        console.log('Setting wholesale form data:', newFormData);
+        setFormData(newFormData);
         
         const cartIdentifier = await getCartIdentifier(userData);
         const cartData = await getAllCarts(cartIdentifier);
         
+        console.log('Cart data received:', cartData);
+        
+        // Check if cartData exists and has products
+        if (!cartData || !cartData.products || cartData.products.length === 0) {
+          console.log('No cart data or empty cart, redirecting...');
+          toast.error('Your wholesale cart is empty');
+          router.push('/wholesale-cart');
+          return;
+        }
+        
         // Filter only wholesale products
-        const wholesaleProducts = cartData.products?.filter((item: any) => 
-          item.product && item.product.category === 'WHOLESALE'
-        ) || [];
+        const wholesaleProducts = cartData.products.filter((item: any) => {
+          if (!item || !item.product) {
+            console.log('Skipping invalid item:', item);
+            return false;
+          }
+          return item.product.category === 'WHOLESALE';
+        });
+        
+        console.log('Wholesale products found:', wholesaleProducts.length);
         
         if (wholesaleProducts.length === 0) {
+          console.log('No wholesale products in cart, redirecting...');
           toast.error('Your wholesale cart is empty');
           router.push('/wholesale-cart');
           return;
@@ -104,54 +142,137 @@ export default function WholesaleCheckout() {
       }
     };
 
+    // Listen for profile updates from other components
+    const handleProfileUpdate = (event: any) => {
+      console.log('Wholesale profile updated from other component:', event.detail);
+      if (event.detail) {
+        setFormData(event.detail);
+      } else {
+        // Fallback to localStorage
+        const cachedProfile = localStorage.getItem('userProfileCache');
+        if (cachedProfile) {
+          try {
+            setFormData(JSON.parse(cachedProfile));
+          } catch (e) {
+            console.error('Failed to parse cached profile:', e);
+          }
+        }
+      }
+    };
+    
+    window.addEventListener('profileUpdated', handleProfileUpdate);
     initializeCheckout();
+    
+    return () => {
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
+    };
   }, [router]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData(prev => ({
-      ...prev,
+    const newFormData = {
+      ...formData,
       [e.target.name]: e.target.value
-    }));
+    };
+    setFormData(newFormData);
+    
+    // Auto-save to localStorage for real-time sync with profile
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('userProfileCache', JSON.stringify(newFormData));
+      window.dispatchEvent(new CustomEvent('profileUpdated', { detail: newFormData }));
+      
+      // Debounced auto-save to database
+      clearTimeout(window.autoSaveTimeout);
+      window.autoSaveTimeout = setTimeout(async () => {
+        try {
+          const { updateProfileClient } = await import('@/actions/profile');
+          await updateProfileClient({
+            firstName: newFormData.firstName,
+            lastName: newFormData.lastName,
+            phone: newFormData.phone,
+            address: newFormData.address,
+            city: newFormData.city,
+            state: newFormData.state,
+            zipCode: newFormData.zipCode,
+            country: newFormData.country
+          });
+          console.log('Auto-saved profile from wholesale checkout');
+        } catch (error) {
+          console.error('Auto-save failed:', error);
+        }
+      }, 2000); // Save after 2 seconds of no typing
+    }
   };
 
-  const copyUpiId = async () => {
+  const handleRazorpayPayment = async () => {
     try {
-      await navigator.clipboard.writeText('7266849104-3@ybl');
-      setUpiIdCopied(true);
-      toast.success('UPI ID copied to clipboard!');
-      setTimeout(() => setUpiIdCopied(false), 2000);
-    } catch (err) {
-      toast.error('Failed to copy UPI ID');
+      setOrderLoading(true);
+      
+      // First create the wholesale order in your database
+      const { createWholesaleOrderClient } = await import('@/actions/wholesale-orders-client');
+      const orderResult = await createWholesaleOrderClient(formData, 'razorpay', null);
+      
+      if (!orderResult || !orderResult.orderId) {
+        throw new Error('Failed to create wholesale order');
+      }
+
+      // Create Razorpay order
+      const razorpayOrder = await createRazorpayOrderClient(total);
+      
+      const options = {
+        key: razorpayOrder.key,
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
+        name: 'Royal Digital Mart - Wholesale',
+        description: 'Wholesale Order Payment',
+        order_id: razorpayOrder.orderId,
+        handler: async function (response: any) {
+          try {
+            // Verify payment
+            await verifyRazorpayPaymentClient(response, orderResult.orderId);
+            toast.success('Wholesale payment successful!');
+            router.push(`/wholesale-order-confirmation?orderId=${orderResult.orderId}&total=${total.toFixed(2)}`);
+          } catch (error: any) {
+            toast.error(error.message || 'Payment verification failed');
+          }
+        },
+        prefill: {
+          name: `${formData.firstName} ${formData.lastName}`,
+          email: formData.email,
+          contact: formData.phone,
+        },
+        theme: {
+          color: '#f59e0b',
+        },
+      };
+
+      const razorpay = new (window as any).Razorpay(options);
+      razorpay.open();
+      
+    } catch (error: any) {
+      console.error('Razorpay wholesale payment error:', error);
+      toast.error(error.message || 'Payment failed');
+    } finally {
+      setOrderLoading(false);
     }
   };
 
   const handlePlaceOrder = async () => {
-    // If UPI payment and not showing details yet, show UPI payment details
-    if (paymentMethod === 'upi' && !showUpiDetails) {
-      setShowUpiDetails(true);
-      toast.success('Please complete UPI payment and upload screenshot');
-      return;
-    }
-
-    // Validate required fields
+    // Validate required fields first
     if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.address || !formData.city || !formData.zipCode) {
       toast.error('Please fill all required fields');
-      if (paymentMethod === 'upi') {
-        setShowUpiDetails(false);
-      }
       return;
     }
-
-    // If UPI payment and showing details, check for screenshot
-    if (paymentMethod === 'upi' && showUpiDetails && !paymentScreenshot) {
-      toast.error('Please upload payment screenshot for UPI payment');
+    
+    // If Razorpay payment, handle it separately
+    if (paymentMethod === 'razorpay') {
+      await handleRazorpayPayment();
       return;
     }
 
     setOrderLoading(true);
     try {
       const { createWholesaleOrderClient } = await import('@/actions/wholesale-orders-client');
-      const result = await createWholesaleOrderClient(formData, paymentMethod, paymentScreenshot);
+      const result = await createWholesaleOrderClient(formData, paymentMethod, null);
       toast.success('Wholesale order placed successfully!');
       router.push(`/wholesale-order-confirmation?orderId=${result.orderId}&total=${total.toFixed(2)}`);
     } catch (error: any) {
@@ -191,6 +312,30 @@ export default function WholesaleCheckout() {
     return discountedSubtotal + shipping + tax;
   };
 
+  // Use cart calculations if available, otherwise calculate manually
+  const getCalculations = () => {
+    if (cart?.calculations) {
+      return {
+        subtotal: cart.calculations.subtotal,
+        discount: cart.calculations.discount,
+        discountedSubtotal: cart.calculations.subtotal - cart.calculations.discount,
+        shipping: 100, // Fixed shipping for wholesale
+        tax: cart.calculations.tax,
+        total: cart.calculations.total + 100 // Add shipping to cart total
+      };
+    }
+    
+    // Fallback calculations
+    const subtotal = calculateSubtotal();
+    const discount = calculateDiscount(subtotal);
+    const discountedSubtotal = subtotal - discount;
+    const shipping = calculateShipping();
+    const tax = calculateTax(discountedSubtotal);
+    const total = discountedSubtotal + shipping + tax;
+    
+    return { subtotal, discount, discountedSubtotal, shipping, tax, total };
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 flex items-center justify-center">
@@ -202,12 +347,8 @@ export default function WholesaleCheckout() {
     );
   }
 
-  const subtotal = calculateSubtotal();
-  const discount = calculateDiscount(subtotal);
-  const discountedSubtotal = subtotal - discount;
-  const shipping = calculateShipping();
-  const tax = calculateTax(discountedSubtotal);
-  const total = calculateTotal();
+  const calculations = getCalculations();
+  const { subtotal, discount, discountedSubtotal, shipping, tax, total } = calculations;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 py-8">
@@ -351,140 +492,21 @@ export default function WholesaleCheckout() {
                   <div className="flex items-center space-x-2">
                     <input
                       type="radio"
-                      id="card"
+                      id="razorpay"
                       name="payment"
-                      value="card"
-                      checked={paymentMethod === 'card'}
+                      value="razorpay"
+                      checked={paymentMethod === 'razorpay'}
                       onChange={(e) => setPaymentMethod(e.target.value)}
                       className="w-4 h-4 text-amber-600"
                     />
-                    <label htmlFor="card" className="flex items-center gap-2 cursor-pointer">
+                    <label htmlFor="razorpay" className="flex items-center gap-2 cursor-pointer">
                       <CreditCard className="h-4 w-4" />
-                      Credit/Debit Card
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="radio"
-                      id="upi"
-                      name="payment"
-                      value="upi"
-                      checked={paymentMethod === 'upi'}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="w-4 h-4 text-amber-600"
-                    />
-                    <label htmlFor="upi" className="flex items-center gap-2 cursor-pointer">
-                      <Phone className="h-4 w-4" />
-                      UPI Payment
+                      Razorpay (Cards, UPI, Wallets)
                     </label>
                   </div>
                 </div>
               </CardContent>
             </Card>
-
-            {/* UPI Payment Details */}
-            {showUpiDetails && paymentMethod === 'upi' && (
-              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-                <CardHeader className="bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-t-lg">
-                  <CardTitle className="flex items-center gap-2">
-                    <Phone className="h-5 w-5" />
-                    Complete UPI Payment
-                  </CardTitle>
-                  <CardDescription className="text-green-100">
-                    Pay ₹{total.toFixed(2)} using UPI and upload payment screenshot
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700">UPI ID:</Label>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Input 
-                            value="7266849104-3@ybl" 
-                            readOnly 
-                            className="bg-gray-50 font-mono text-sm"
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={copyUpiId}
-                            className={upiIdCopied ? 'bg-green-50 border-green-300 text-green-700' : ''}
-                          >
-                            {upiIdCopied ? 'Copied!' : 'Copy'}
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700 mb-2 block">Scan QR Code:</Label>
-                        <div className="flex justify-center">
-                          <div className="bg-white p-4 rounded-lg border-2 border-dashed border-gray-300">
-                            <Image
-                              src="/images/upi_qr.jpeg"
-                              alt="UPI QR Code"
-                              width={200}
-                              height={200}
-                              className="rounded-lg"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700 mb-2 block">
-                          Upload Payment Screenshot *
-                        </Label>
-                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => setPaymentScreenshot(e.target.files?.[0] || null)}
-                            className="hidden"
-                            id="payment-screenshot"
-                          />
-                          <label htmlFor="payment-screenshot" className="cursor-pointer">
-                            <div className="space-y-2">
-                              <div className="mx-auto w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
-                                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                </svg>
-                              </div>
-                              <div className="text-sm text-gray-600">
-                                {paymentScreenshot ? paymentScreenshot.name : 'Click to upload screenshot'}
-                              </div>
-                            </div>
-                          </label>
-                        </div>
-                      </div>
-                      
-                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <h4 className="font-semibold text-blue-800 mb-2">Payment Instructions:</h4>
-                        <ol className="text-sm text-blue-700 space-y-1">
-                          <li>1. Pay <strong>₹{total.toFixed(2)}</strong> to UPI ID: <strong>7266849104-3@ybl</strong></li>
-                          <li>2. Or scan the QR code with any UPI app</li>
-                          <li>3. Take a screenshot of payment confirmation</li>
-                          <li>4. Upload the screenshot above</li>
-                          <li>5. Click "Complete Order" to finish</li>
-                        </ol>
-                      </div>
-                      
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setShowUpiDetails(false)}
-                        className="w-full"
-                      >
-                        ← Back to Payment Options
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </div>
 
           <div>
@@ -540,7 +562,7 @@ export default function WholesaleCheckout() {
                     <span>₹{subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-green-600">
-                    <span>Wholesale Discount ({wholesaleSettings?.wholesaleDiscount || 10}%)</span>
+                    <span>Wholesale Discount ({cart?.calculations?.discountPercentage || wholesaleSettings?.wholesaleDiscount || 10}%)</span>
                     <span>-₹{discount.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
@@ -552,7 +574,7 @@ export default function WholesaleCheckout() {
                     <span>₹{shipping.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>GST ({wholesaleSettings?.taxRate || 18}%)</span>
+                    <span>GST ({cart?.calculations?.taxPercentage || wholesaleSettings?.taxRate || 18}%)</span>
                     <span>₹{tax.toFixed(2)}</span>
                   </div>
                   <Separator />
@@ -573,10 +595,8 @@ export default function WholesaleCheckout() {
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                       Placing Wholesale Order...
                     </div>
-                  ) : paymentMethod === 'upi' && !showUpiDetails ? (
-                    `Proceed to UPI Payment - ₹${total.toFixed(2)}`
-                  ) : paymentMethod === 'upi' && showUpiDetails ? (
-                    `Complete Wholesale Order - ₹${total.toFixed(2)}`
+                  ) : paymentMethod === 'razorpay' ? (
+                    `Pay with Razorpay - ₹${total.toFixed(2)}`
                   ) : (
                     `Place Wholesale Order - ₹${total.toFixed(2)}`
                   )}

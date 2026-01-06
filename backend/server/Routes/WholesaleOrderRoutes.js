@@ -118,30 +118,7 @@ router.post('/create', auth, upload.single('paymentScreenshot'), async (req, res
     );
     await cart.save();
 
-    // Send wholesale order confirmation email
-    try {
-      const userEmail = req.user.email;
-      const products = wholesaleProducts.map(item => ({
-        name: item.product.name,
-        quantity: item.quantity,
-        price: item.totalPrice.toFixed(2)
-      }));
-
-      await sendWholesaleOrderConfirmation(userEmail, {
-        orderId: order._id,
-        customerName: parsedShippingDetails.firstName,
-        products: products,
-        subtotal: subtotal.toFixed(2),
-        discount: discount.toFixed(2),
-        shipping: shipping.toFixed(2),
-        tax: tax.toFixed(2),
-        total: total.toFixed(2),
-        paymentMethod: paymentMethod
-      });
-      console.log('Wholesale order confirmation email sent successfully');
-    } catch (emailError) {
-      console.error('Failed to send wholesale order confirmation email:', emailError);
-    }
+    // Note: Wholesale order confirmation email will be sent when admin confirms the order
 
     res.status(201).json({ 
       success: true,
@@ -301,6 +278,80 @@ router.get('/track/:orderId', async (req, res) => {
   } catch (error) {
     console.error('Error tracking wholesale order:', error);
     res.status(500).json({ success: false, message: 'Failed to track order' });
+  }
+});
+
+// Get all wholesale orders (Admin only)
+router.get('/admin/all', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    const orders = await WholesaleOrder.find()
+      .populate('user', 'username email firstName lastName phone')
+      .populate('products.product', 'name price images')
+      .sort({ createdAt: -1 });
+
+    res.json({ success: true, orders });
+  } catch (error) {
+    console.error('Error fetching wholesale orders:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch wholesale orders' });
+  }
+});
+
+// Export wholesale orders to CSV (Admin only)
+router.get('/export/csv', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    const orders = await WholesaleOrder.find()
+      .populate('user', 'username email firstName lastName phone')
+      .populate('products.product', 'name price')
+      .sort({ createdAt: -1 });
+
+    const csvData = [];
+    
+    orders.forEach(order => {
+      order.products.forEach(item => {
+        csvData.push({
+          'Order ID': 'W' + order._id.toString().slice(-8),
+          'Tracking ID': order._id.toString(),
+          'Order Date': new Date(order.createdAt).toLocaleDateString(),
+          'Customer Name': `${order.shippingDetails.firstName} ${order.shippingDetails.lastName}`,
+          'Customer Email': order.shippingDetails.email,
+          'Customer Phone': order.shippingDetails.phone,
+          'Product Name': item.product?.name || 'Unknown',
+          'Quantity': item.quantity,
+          'Size': item.size || '-',
+          'Color': item.color || '-',
+          'Product Price': item.purchasePrice,
+          'Total Price': item.totalPrice,
+          'Subtotal': order.subtotal,
+          'Discount': order.discount,
+          'Shipping': order.shipping,
+          'Tax': order.tax,
+          'Order Total': order.total,
+          'Payment Method': order.paymentMethod.toUpperCase(),
+          'Payment Status': order.paymentStatus,
+          'Order Status': order.status,
+          'Shipping Address': `${order.shippingDetails.address}, ${order.shippingDetails.city}, ${order.shippingDetails.state} ${order.shippingDetails.zipCode}`,
+          'Country': order.shippingDetails.country
+        });
+      });
+    });
+
+    const csv = Object.keys(csvData[0] || {}).join(',') + '\n' +
+      csvData.map(row => Object.values(row).map(val => `"${val}"`).join(',')).join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="wholesale-orders-${new Date().toISOString().split('T')[0]}.csv"`);
+    res.send(csv);
+  } catch (error) {
+    console.error('Error exporting wholesale orders:', error);
+    res.status(500).json({ message: 'Failed to export wholesale orders' });
   }
 });
 

@@ -12,7 +12,7 @@ export default function SareePage() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products?category=saree`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products?category=SAREE`);
         console.log(response);
         if (!response.ok) {
           throw new Error('Failed to fetch products');
@@ -52,7 +52,7 @@ export default function SareePage() {
     <>
       
       {/* Hero Banner */}
-      <section className="relative w-full h-[320px] md:h-[400px] flex items-center justify-center mb-8 overflow-hidden">
+      <section className="relative w-full h-[520px] md:h-[600px] flex items-center justify-center mb-8 overflow-hidden">
         <Image src="/banners/landscape-05.png" alt="Saree Banner" fill priority className="object-cover opacity-100" />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center z-10">
           <h1 className="text-4xl md:text-5xl font-extrabold text-white drop-shadow mb-4" style={{ fontFamily: 'Quicksand, sans-serif' }}>Exquisite Sarees Collection</h1>
@@ -93,7 +93,7 @@ export default function SareePage() {
 
         {/* Product Grid */}
         <section id="products">
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
             {products && products.length > 0 ? (
               products.map((product) => (
                 <ProductCard key={product._id} product={product} />

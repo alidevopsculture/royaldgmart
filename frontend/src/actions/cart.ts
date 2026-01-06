@@ -1,10 +1,11 @@
 // Cache for cart data
 let cartCache: any = null;
 let lastFetch = 0;
-const CACHE_DURATION = 3000; // 3 seconds
+const CACHE_DURATION = 1000; // 1 second - shorter cache for better consistency
 
 // Clear cart cache when cart is modified
 const clearCartCache = () => {
+    console.log('Cart cache cleared');
     cartCache = null;
     lastFetch = 0;
 };
@@ -124,6 +125,7 @@ export const getAllCarts = async ({userId, sessionId}: {userId?: string, session
             cartCache = { key: cacheKey, data: result };
             lastFetch = now;
             
+            console.log('Cart fetched and cached:', result?.products?.length || 0, 'items');
             return result;
         }
     } catch (error: any) {

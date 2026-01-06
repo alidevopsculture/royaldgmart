@@ -16,7 +16,7 @@ const generateSimpleUUID = (): string => {
 const GUEST_SESSION_KEY = 'guest_cart_session';
 
 /**
- * Get or create guest session ID from localStorage
+ * Get or create guest session ID from localStorage with persistence
  */
 export const getOrCreateGuestSession = async (): Promise<string> => {
   // Check if we're in browser environment
@@ -35,14 +35,24 @@ export const getOrCreateGuestSession = async (): Promise<string> => {
       console.log('Generated new session ID:', sessionId);
       if (sessionId) {
         localStorage.setItem(GUEST_SESSION_KEY, sessionId);
+        // Also store in sessionStorage as backup
+        sessionStorage.setItem(GUEST_SESSION_KEY, sessionId);
       }
     } catch (error) {
       console.error('Failed to generate guest session:', error);
-      // Fallback: generate a simple UUID client-side
-      sessionId = generateSimpleUUID();
-      console.log('Fallback session ID:', sessionId);
+      // Try to get from sessionStorage as fallback
+      sessionId = sessionStorage.getItem(GUEST_SESSION_KEY);
+      if (!sessionId) {
+        // Final fallback: generate a simple UUID client-side
+        sessionId = generateSimpleUUID();
+        console.log('Fallback session ID:', sessionId);
+      }
       localStorage.setItem(GUEST_SESSION_KEY, sessionId);
+      sessionStorage.setItem(GUEST_SESSION_KEY, sessionId);
     }
+  } else {
+    // Ensure sessionStorage also has the session ID
+    sessionStorage.setItem(GUEST_SESSION_KEY, sessionId);
   }
   
   const finalSessionId = sessionId || generateSimpleUUID();
@@ -51,11 +61,12 @@ export const getOrCreateGuestSession = async (): Promise<string> => {
 };
 
 /**
- * Clear guest session from localStorage
+ * Clear guest session from both localStorage and sessionStorage
  */
 export const clearGuestSession = (): void => {
   if (typeof window !== 'undefined') {
     localStorage.removeItem(GUEST_SESSION_KEY);
+    sessionStorage.removeItem(GUEST_SESSION_KEY);
   }
 };
 
@@ -66,7 +77,8 @@ export const getCurrentGuestSession = (): string | null => {
   if (typeof window === 'undefined') {
     return null;
   }
-  return localStorage.getItem(GUEST_SESSION_KEY);
+  // Try localStorage first, then sessionStorage as fallback
+  return localStorage.getItem(GUEST_SESSION_KEY) || sessionStorage.getItem(GUEST_SESSION_KEY);
 };
 
 /**

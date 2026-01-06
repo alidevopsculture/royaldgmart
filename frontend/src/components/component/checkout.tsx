@@ -9,9 +9,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingBag, User, CreditCard, MapPin, Phone, Mail, Truck, Banknote, Upload, Copy, CheckCircle, AlertCircle } from 'lucide-react';
+import { ShoppingBag, User, CreditCard, MapPin, Phone, Mail, Truck, Banknote, AlertCircle, X } from 'lucide-react';
 import { getUserData } from '@/actions/auth';
 import { getAllCarts, transferGuestCartToUser } from '@/actions/cart';
+import { createRazorpayOrderClient, verifyRazorpayPaymentClient } from '@/actions/payment-client';
 import { getCartIdentifier, hasCartItems, clearGuestSession, getCurrentGuestSession } from '@/lib/cart-utils';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
@@ -24,9 +25,12 @@ interface CartItem {
     description: string;
     price: number;
     images: string[];
+    shippingCharges?: number;
+    taxRate?: number;
   };
   quantity: number;
   size: string | null;
+  color?: string;
   purchasePrice: number;
   totalPrice: number;
 }
@@ -38,6 +42,13 @@ interface Cart {
   products: CartItem[];
   createdAt: string;
   updatedAt: string;
+}
+
+// Extend Window interface for TypeScript
+declare global {
+  interface Window {
+    autoSaveTimeout: NodeJS.Timeout;
+  }
 }
 
 export default function Checkout() {
@@ -57,26 +68,69 @@ export default function Checkout() {
     country: 'India'
   });
   const [paymentMethod, setPaymentMethod] = useState('cod');
-  const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
-  const [upiIdCopied, setUpiIdCopied] = useState(false);
-  const [showUpiDetails, setShowUpiDetails] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
+    // Load Razorpay script with better mobile support
+    const loadRazorpayScript = () => {
+      return new Promise((resolve) => {
+        if (typeof (window as any).Razorpay !== 'undefined') {
+          resolve(true);
+          return;
+        }
+        
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.async = true;
+        script.crossOrigin = 'anonymous';
+        
+        let loaded = false;
+        const cleanup = () => {
+          script.onload = null;
+          script.onerror = null;
+        };
+        
+        script.onload = () => {
+          if (!loaded) {
+            loaded = true;
+            cleanup();
+            console.log('Razorpay SDK loaded');
+            resolve(true);
+          }
+        };
+        
+        script.onerror = () => {
+          if (!loaded) {
+            loaded = true;
+            cleanup();
+            console.error('Razorpay SDK failed to load');
+            resolve(false);
+          }
+        };
+        
+        // Timeout fallback
+        setTimeout(() => {
+          if (!loaded) {
+            loaded = true;
+            cleanup();
+            resolve(false);
+          }
+        }, 10000);
+        
+        document.head.appendChild(script);
+      });
+    };
+
+    loadRazorpayScript();
+  }, []);
+
+  useEffect(() => {
+    // Ensure we're on the client side
+    if (typeof window === 'undefined') return;
+    
     const initializeCheckout = async () => {
       try {
         setLoading(true);
-        
-        // Test API connection
-        try {
-          const testResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/test-auth`, {
-            credentials: 'include'
-          });
-          console.log('API connection test:', testResponse.status);
-        } catch (error) {
-          console.error('API connection failed:', error);
-          toast.error('Cannot connect to server. Please check if the backend is running.');
-        }
         
         const userData = await getUserData();
         
@@ -86,17 +140,34 @@ export default function Checkout() {
         }
         
         // Fetch complete profile data
-        const { getUserProfile } = await import('@/actions/profile');
-        const profileResult = await getUserProfile();
+        const { getUserProfileClient } = await import('@/actions/profile');
+        const profileResult = await getUserProfileClient();
         
         let fullUserData = userData;
-        if (profileResult.success && profileResult.user) {
-          fullUserData = profileResult.user;
+        if (profileResult && profileResult.success && profileResult.user) {
+          fullUserData = { ...userData, ...profileResult.user };
+          console.log('Profile data loaded:', profileResult.user);
+          // Cache the profile data
+          localStorage.setItem('userProfileCache', JSON.stringify(profileResult.user));
+        } else {
+          console.log('Profile fetch failed:', profileResult?.error);
+          // Try to use cached profile data
+          const cachedProfile = localStorage.getItem('userProfileCache');
+          if (cachedProfile) {
+            try {
+              const parsedProfile = JSON.parse(cachedProfile);
+              fullUserData = { ...userData, ...parsedProfile };
+              console.log('Using cached profile data:', parsedProfile);
+            } catch (e) {
+              console.error('Failed to parse cached profile:', e);
+            }
+          }
         }
         
         setUser(fullUserData);
-        setFormData(prev => ({
-          ...prev,
+        
+        // Always populate form with available data
+        const newFormData = {
           firstName: fullUserData.firstName || '',
           lastName: fullUserData.lastName || '',
           email: fullUserData.email || '',
@@ -106,7 +177,10 @@ export default function Checkout() {
           state: fullUserData.state || '',
           zipCode: fullUserData.zipCode || '',
           country: fullUserData.country || 'India'
-        }));
+        };
+        
+        console.log('Setting form data:', newFormData);
+        setFormData(newFormData);
         
         const guestSessionId = getCurrentGuestSession();
         if (guestSessionId) {
@@ -119,121 +193,348 @@ export default function Checkout() {
         }
         
         const cartIdentifier = await getCartIdentifier(userData);
+        
+        // Add a small delay to ensure cart is updated after Buy Now
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         const cartData = await getAllCarts(cartIdentifier);
         
+        console.log('Cart data received:', cartData);
+        
+        // Check if cartData exists and has products
+        if (!cartData || !cartData.products || cartData.products.length === 0) {
+          console.log('No cart data or empty cart, redirecting...');
+          toast.error('Your cart is empty');
+          router.push('/cart');
+          return;
+        }
+        
         // Filter out wholesale products for regular checkout
-        const regularProducts = cartData.products?.filter((item: any) => 
-          item.product && item.product.category !== 'WHOLESALE'
-        ) || [];
+        const regularProducts = cartData.products.filter((item: any) => {
+          if (!item || !item.product) {
+            console.log('Skipping invalid item:', item);
+            return false;
+          }
+          return item.product.category !== 'WHOLESALE';
+        });
+        
+        console.log('Regular products found:', regularProducts.length);
         
         if (regularProducts.length === 0) {
+          console.log('No regular products in cart, redirecting...');
           toast.error('Your cart is empty');
           router.push('/cart');
           return;
         }
         
         setCart({ ...cartData, products: regularProducts });
+        
+        // Test API connection after cart is validated
+        try {
+          const testResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/test-auth`, {
+            credentials: 'include'
+          });
+          if (testResponse) {
+            console.log('API connection test:', testResponse.status);
+          }
+        } catch (error) {
+          console.error('API connection failed:', error);
+          toast.error('Cannot connect to server. Please check if the backend is running.');
+        }
+        
       } catch (err: any) {
         console.error('Error initializing checkout:', err);
         toast.error('Failed to load checkout');
+        router.push('/cart');
       } finally {
         setLoading(false);
       }
     };
 
+    // Listen for profile updates from other components
+    const handleProfileUpdate = (event: any) => {
+      console.log('Profile updated from other component:', event.detail);
+      if (event.detail) {
+        const updatedData = {
+          firstName: event.detail.firstName || '',
+          lastName: event.detail.lastName || '',
+          email: event.detail.email || '',
+          phone: event.detail.phone || '',
+          address: event.detail.address || '',
+          city: event.detail.city || '',
+          state: event.detail.state || '',
+          zipCode: event.detail.zipCode || '',
+          country: event.detail.country || 'India'
+        };
+        setFormData(updatedData);
+      } else {
+        // Fallback to localStorage
+        const cachedProfile = localStorage.getItem('userProfileCache');
+        if (cachedProfile) {
+          try {
+            const parsedProfile = JSON.parse(cachedProfile);
+            const updatedData = {
+              firstName: parsedProfile.firstName || '',
+              lastName: parsedProfile.lastName || '',
+              email: parsedProfile.email || '',
+              phone: parsedProfile.phone || '',
+              address: parsedProfile.address || '',
+              city: parsedProfile.city || '',
+              state: parsedProfile.state || '',
+              zipCode: parsedProfile.zipCode || '',
+              country: parsedProfile.country || 'India'
+            };
+            setFormData(updatedData);
+          } catch (e) {
+            console.error('Failed to parse cached profile:', e);
+          }
+        }
+      }
+    };
+    
+    window.addEventListener('profileUpdated', handleProfileUpdate);
     initializeCheckout();
+    
+    return () => {
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
+    };
   }, [router]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
-  };
-
-  const handleScreenshotUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('File size should be less than 5MB');
-        return;
+  const handleRemoveItem = async (productId: string) => {
+    try {
+      const { removeFromCart } = await import('@/actions/cart');
+      
+      const result = await removeFromCart({
+        userId: user?.id,
+        sessionId: !user?.id ? await getCartIdentifier(user).then(ci => ci.sessionId) : undefined,
+        productId
+      });
+      
+      if (result.success) {
+        // Refresh cart data immediately
+        const cartIdentifier = await getCartIdentifier(user);
+        const updatedCartData = await getAllCarts(cartIdentifier);
+        const regularProducts = updatedCartData.products.filter((item: any) => 
+          item.product && item.product.category !== 'WHOLESALE'
+        );
+        
+        if (regularProducts.length === 0) {
+          toast.success('Item removed from cart');
+          router.push('/cart');
+          return;
+        }
+        
+        setCart({ ...updatedCartData, products: regularProducts });
+        toast.success('Item removed from cart');
+      } else {
+        toast.error('Failed to remove item');
       }
-      if (!file.type.startsWith('image/')) {
-        toast.error('Please upload an image file');
-        return;
-      }
-      setPaymentScreenshot(file);
-      toast.success('Screenshot uploaded successfully!');
+    } catch (error) {
+      console.error('Remove item error:', error);
+      toast.error('Error removing item');
     }
   };
 
-  const copyUpiId = async () => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const newFormData = {
+      ...formData,
+      [e.target.name]: e.target.value
+    };
+    setFormData(newFormData);
+    
+    // Auto-save to localStorage for real-time sync with profile
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('userProfileCache', JSON.stringify(newFormData));
+      window.dispatchEvent(new CustomEvent('profileUpdated', { detail: newFormData }));
+      
+      // Debounced auto-save to database
+      clearTimeout(window.autoSaveTimeout);
+      window.autoSaveTimeout = setTimeout(async () => {
+        try {
+          const { updateProfileClient } = await import('@/actions/profile');
+          await updateProfileClient({
+            firstName: newFormData.firstName,
+            lastName: newFormData.lastName,
+            phone: newFormData.phone,
+            address: newFormData.address,
+            city: newFormData.city,
+            state: newFormData.state,
+            zipCode: newFormData.zipCode,
+            country: newFormData.country
+          });
+          console.log('Auto-saved profile from checkout');
+        } catch (error) {
+          console.error('Auto-save failed:', error);
+        }
+      }, 2000); // Save after 2 seconds of no typing
+    }
+  };
+
+  const handleRazorpayPayment = async () => {
     try {
-      await navigator.clipboard.writeText('7266849104-3@ybl');
-      setUpiIdCopied(true);
-      toast.success('UPI ID copied to clipboard!');
-      setTimeout(() => setUpiIdCopied(false), 2000);
-    } catch (err) {
-      toast.error('Failed to copy UPI ID');
+      setOrderLoading(true);
+      
+      // Validate cart before proceeding
+      if (!cart || !cart.products || cart.products.length === 0) {
+        throw new Error('Cart is empty');
+      }
+      
+      // First create the order in your database
+      const { createOrder } = await import('@/actions/order');
+      const orderResult = await createOrder(formData, 'razorpay', null);
+      
+      if (!orderResult || !orderResult.orderId) {
+        throw new Error('Failed to create order');
+      }
+
+      // Create Razorpay order with proper error handling
+      const razorpayOrder = await createRazorpayOrderClient(total);
+      
+      if (!razorpayOrder || !razorpayOrder.orderId) {
+        throw new Error('Failed to create Razorpay order');
+      }
+      
+      const options = {
+        key: razorpayOrder.key,
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
+        name: 'Royal Digital Mart',
+        description: 'Order Payment',
+        image: '/favicon.ico',
+        order_id: razorpayOrder.orderId,
+        handler: async function (response: any) {
+          try {
+            if (!response) {
+              throw new Error('Payment response is empty');
+            }
+            // Verify payment
+            const verificationResult = await verifyRazorpayPaymentClient(response, orderResult.orderId);
+            if (verificationResult && verificationResult.success) {
+              toast.success('Payment successful!');
+              router.push(`/order-confirmation?orderId=${orderResult.orderId}&total=${total.toFixed(2)}`);
+            } else {
+              throw new Error('Payment verification failed');
+            }
+          } catch (error: any) {
+            console.error('Payment handler error:', error);
+            toast.error(error.message || 'Payment verification failed');
+          }
+        },
+        prefill: {
+          name: `${formData.firstName} ${formData.lastName}`,
+          email: formData.email,
+          contact: formData.phone,
+        },
+        notes: {
+          address: formData.address,
+          city: formData.city
+        },
+        theme: {
+          color: '#6366f1',
+        },
+        modal: {
+          ondismiss: function() {
+            if (pollInterval) clearInterval(pollInterval);
+            console.log('Payment modal dismissed');
+            toast.error('Payment cancelled');
+          },
+          escape: false,
+          backdropclose: false,
+          confirm_close: true
+        },
+        retry: {
+          enabled: true,
+          max_count: 3
+        },
+        timeout: 300
+      };
+
+      // Better Razorpay loading check with fallback
+      let pollInterval: NodeJS.Timeout;
+      
+      const initRazorpay = () => {
+        if (typeof (window as any).Razorpay === 'undefined') {
+          toast.error('Payment service unavailable. Please use Cash on Delivery or try again later.');
+          setPaymentMethod('cod');
+          return;
+        }
+        
+        try {
+          const razorpay = new (window as any).Razorpay(options);
+          
+          razorpay.on('payment.failed', function (response: any) {
+            if (pollInterval) clearInterval(pollInterval);
+            console.error('Payment failed:', response.error);
+            toast.error('Payment failed. Please try again or use Cash on Delivery.');
+          });
+          
+          // Start polling when modal opens
+          razorpay.on('payment.submit', function() {
+            pollInterval = setInterval(async () => {
+              try {
+                const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
+                const statusResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${orderResult.orderId}/status`, {
+                  headers: { 'Authorization': `Bearer ${token}` },
+                  credentials: 'include'
+                });
+                
+                if (statusResponse.ok) {
+                  const statusData = await statusResponse.json();
+                  if (statusData.paymentStatus === 'completed') {
+                    clearInterval(pollInterval);
+                    razorpay.close();
+                    toast.success('Payment successful!');
+                    router.push(`/order-confirmation?orderId=${orderResult.orderId}&total=${total.toFixed(2)}`);
+                  }
+                }
+              } catch (error) {
+                console.error('Status polling error:', error);
+              }
+            }, 3000);
+          });
+          
+          razorpay.open();
+        } catch (error) {
+          console.error('Razorpay initialization error:', error);
+          toast.error('Payment service error. Please use Cash on Delivery.');
+          setPaymentMethod('cod');
+        }
+      };
+      
+      initRazorpay();
+      
+    } catch (error: any) {
+      console.error('Razorpay payment error:', error);
+      toast.error(error.message || 'Payment failed. Please try again.');
+    } finally {
+      setOrderLoading(false);
     }
   };
 
   const handlePlaceOrder = async () => {
-    console.log('Button clicked! Payment method:', paymentMethod, 'Show UPI details:', showUpiDetails);
-    
-    // If UPI payment and not showing details yet, show UPI payment details
-    if (paymentMethod === 'upi' && !showUpiDetails) {
-      console.log('Showing UPI details...');
-      setShowUpiDetails(true);
-      toast.success('Please complete UPI payment and upload screenshot');
-      return;
-    }
-
-    // Always validate required fields since they're needed for order
-    console.log('Current form data:', formData);
+    // Validate required fields first
     if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.address || !formData.city || !formData.zipCode) {
-      console.log('Missing fields:', {
-        firstName: !formData.firstName,
-        lastName: !formData.lastName,
-        email: !formData.email,
-        phone: !formData.phone,
-        address: !formData.address,
-        city: !formData.city,
-        zipCode: !formData.zipCode
-      });
       toast.error('Please fill all required fields');
-      if (showUpiDetails) {
-        setShowUpiDetails(false);
-      }
       return;
     }
-
-    // If UPI payment and showing details, check for screenshot
-    if (paymentMethod === 'upi' && showUpiDetails && !paymentScreenshot) {
-      toast.error('Please upload payment screenshot for UPI payment');
-      return;
-    }
-
+    
     // Check if cart has items
     if (!cart || !cart.products || cart.products.length === 0) {
       toast.error('Your cart is empty');
       router.push('/cart');
       return;
     }
+    
+    // If Razorpay payment, handle it separately
+    if (paymentMethod === 'razorpay') {
+      await handleRazorpayPayment();
+      return;
+    }
 
     setOrderLoading(true);
     try {
       const { createOrder } = await import('@/actions/order');
-      console.log('Form data being sent:', formData);
-      console.log('Placing order with:', {
-        formData,
-        paymentMethod,
-        showUpiDetails,
-        hasScreenshot: !!paymentScreenshot,
-        cartItems: cart.products.length
-      });
-      
-      const result = await createOrder(formData, paymentMethod, paymentScreenshot);
+      const result = await createOrder(formData, paymentMethod, null);
       
       if (result && result.orderId) {
         toast.success('Order placed successfully!');
@@ -250,12 +551,39 @@ export default function Checkout() {
   };
 
   const calculateSubtotal = () => {
-    if (!cart) return 0;
-    return cart.products.reduce((total, item) => total + item.totalPrice, 0);
+    if (!cart || !cart.products || cart.products.length === 0) {
+      console.log('No cart or products for subtotal calculation');
+      return 0;
+    }
+    const subtotal = cart.products.reduce((total, item) => {
+      if (!item.product) {
+        console.log('Skipping item without product:', item);
+        return total;
+      }
+      return total + (item.totalPrice || 0);
+    }, 0);
+    console.log('Calculated subtotal:', subtotal);
+    return subtotal;
   };
 
-  const calculateShipping = () => 50; // Fixed shipping cost
-  const calculateTax = (subtotal: number) => subtotal * 0.18; // 18% GST
+  const calculateShipping = () => {
+    if (!cart || !cart.products || cart.products.length === 0) return 0;
+    const firstProduct = cart.products[0]?.product;
+    console.log('First product for shipping:', firstProduct);
+    console.log('Shipping charges:', firstProduct?.shippingCharges);
+    // Use 0 if shippingCharges is explicitly set to 0, otherwise use 50 as fallback only if undefined
+    return firstProduct?.shippingCharges !== undefined ? firstProduct.shippingCharges : 50;
+  };
+  
+  const calculateTax = (subtotal: number) => {
+    if (!cart || !cart.products || cart.products.length === 0) return 0;
+    const firstProduct = cart.products[0]?.product;
+    console.log('First product for tax:', firstProduct);
+    console.log('Tax rate:', firstProduct?.taxRate);
+    // Use 0 if taxRate is explicitly set to 0, otherwise use 18 as fallback only if undefined
+    const taxRate = firstProduct?.taxRate !== undefined ? firstProduct.taxRate : 18;
+    return (subtotal * taxRate) / 100;
+  };
 
   const calculateTotal = () => {
     const subtotal = calculateSubtotal();
@@ -268,7 +596,10 @@ export default function Checkout() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-indigo-200 rounded-full animate-spin border-t-indigo-600 mx-auto"></div>
+          <div className="relative mx-auto mb-4">
+            <div className="w-16 h-16 border-4 border-orange-200 rounded-full animate-spin border-t-orange-600 shadow-lg"></div>
+            <div className="absolute inset-0 w-16 h-16 border-4 border-transparent rounded-full animate-ping border-t-orange-400 opacity-75"></div>
+          </div>
           <p className="mt-4 text-gray-600">Loading checkout...</p>
         </div>
       </div>
@@ -292,138 +623,16 @@ export default function Checkout() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* UPI Payment Details Modal */}
-          {showUpiDetails && paymentMethod === 'upi' && (
-            <div className="lg:col-span-3 mb-6">
-              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-                <CardHeader className="bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-t-lg">
-                  <CardTitle className="flex items-center gap-2">
-                    <Phone className="h-5 w-5" />
-                    Complete UPI Payment
-                  </CardTitle>
-                  <CardDescription className="text-green-100">
-                    Pay ₹{total.toFixed(2)} using UPI and upload payment screenshot
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Left side - UPI ID and QR Code */}
-                    <div className="space-y-4">
-                      {/* UPI ID */}
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700">UPI ID:</Label>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Input 
-                            value="7266849104-3@ybl" 
-                            readOnly 
-                            className="bg-gray-50 font-mono text-sm"
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={copyUpiId}
-                            className="flex items-center gap-1"
-                          >
-                            {upiIdCopied ? (
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                            ) : (
-                              <Copy className="h-4 w-4" />
-                            )}
-                            {upiIdCopied ? 'Copied!' : 'Copy'}
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      {/* QR Code */}
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700 mb-2 block">Scan QR Code:</Label>
-                        <div className="flex justify-center">
-                          <div className="bg-white p-4 rounded-lg border-2 border-dashed border-gray-300">
-                            <Image
-                              src="/images/upi_qr.jpeg"
-                              alt="UPI QR Code"
-                              width={200}
-                              height={200}
-                              className="rounded-lg"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Right side - Screenshot Upload and Instructions */}
-                    <div className="space-y-4">
-                      {/* Screenshot Upload */}
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700 mb-2 block">
-                          Upload Payment Screenshot: *
-                        </Label>
-                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-green-400 transition-colors">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleScreenshotUpload}
-                            className="hidden"
-                            id="screenshot-upload"
-                          />
-                          <label htmlFor="screenshot-upload" className="cursor-pointer">
-                            <Upload className="h-12 w-12 mx-auto mb-3 text-gray-400" />
-                            <p className="text-sm text-gray-600 mb-2">
-                              {paymentScreenshot ? (
-                                <span className="text-green-600 font-medium">
-                                  ✓ {paymentScreenshot.name}
-                                </span>
-                              ) : (
-                                'Click to upload payment screenshot'
-                              )}
-                            </p>
-                            <p className="text-xs text-gray-400">PNG, JPG up to 5MB</p>
-                          </label>
-                        </div>
-                      </div>
-                      
-                      {/* Instructions */}
-                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <h4 className="font-semibold text-blue-800 mb-2">Payment Instructions:</h4>
-                        <ol className="text-sm text-blue-700 space-y-1">
-                          <li>1. Pay <strong>₹{total.toFixed(2)}</strong> to UPI ID: <strong>7266849104-3@ybl</strong></li>
-                          <li>2. Or scan the QR code with any UPI app</li>
-                          <li>3. Take a screenshot of payment confirmation</li>
-                          <li>4. Upload the screenshot above</li>
-                          <li>5. Click "Complete Order" to finish</li>
-                        </ol>
-                      </div>
-                      
-                      {/* Back Button */}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setShowUpiDetails(false)
-                          setPaymentScreenshot(null)
-                        }}
-                        className="w-full"
-                      >
-                        ← Back to Payment Selection
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-          
           {/* Shipping & Billing Information */}
           <div className="lg:col-span-2 space-y-6">
             {/* Shipping Information */}
             <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-t-lg">
+              <CardHeader className="bg-orange-600 text-white rounded-t-lg">
                 <CardTitle className="flex items-center gap-2">
                   <Truck className="h-5 w-5" />
                   Shipping Information
                 </CardTitle>
-                <CardDescription className="text-indigo-100">
+                <CardDescription className="text-orange-100">
                   Where should we deliver your order?
                 </CardDescription>
               </CardHeader>
@@ -436,7 +645,6 @@ export default function Checkout() {
                       name="firstName"
                       value={formData.firstName}
                       onChange={handleInputChange}
-
                       className="mt-1"
                     />
                   </div>
@@ -447,7 +655,6 @@ export default function Checkout() {
                       name="lastName"
                       value={formData.lastName}
                       onChange={handleInputChange}
-
                       className="mt-1"
                     />
                   </div>
@@ -462,7 +669,6 @@ export default function Checkout() {
                       type="email"
                       value={formData.email}
                       onChange={handleInputChange}
-
                       className="mt-1"
                     />
                   </div>
@@ -474,7 +680,6 @@ export default function Checkout() {
                       type="tel"
                       value={formData.phone}
                       onChange={handleInputChange}
-
                       className="mt-1"
                     />
                   </div>
@@ -487,7 +692,6 @@ export default function Checkout() {
                     name="address"
                     value={formData.address}
                     onChange={handleInputChange}
-
                     className="mt-1"
                     rows={3}
                   />
@@ -501,7 +705,6 @@ export default function Checkout() {
                       name="city"
                       value={formData.city}
                       onChange={handleInputChange}
-
                       className="mt-1"
                     />
                   </div>
@@ -512,7 +715,6 @@ export default function Checkout() {
                       name="state"
                       value={formData.state}
                       onChange={handleInputChange}
-
                       className="mt-1"
                     />
                   </div>
@@ -523,66 +725,44 @@ export default function Checkout() {
                       name="zipCode"
                       value={formData.zipCode}
                       onChange={handleInputChange}
-
                       className="mt-1"
                     />
                   </div>
                 </div>
               </CardContent>
-              </Card>
+            </Card>
 
             {/* Payment Method */}
-            {!showUpiDetails && (
-              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-                <CardHeader className="bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-t-lg">
-                  <CardTitle className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5" />
-                    Payment Method
-                  </CardTitle>
-                  <CardDescription className="text-green-100">
-                    Choose your preferred payment option
-                  </CardDescription>
-                </CardHeader>
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader className="bg-orange-600 text-white rounded-t-lg">
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5" />
+                  Payment Method
+                </CardTitle>
+                <CardDescription className="text-orange-100">
+                  Choose your preferred payment option
+                </CardDescription>
+              </CardHeader>
               <CardContent className="p-6">
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div 
                     className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                      paymentMethod === 'card' 
-                        ? 'border-indigo-400 bg-indigo-50' 
+                      paymentMethod === 'razorpay' 
+                        ? 'border-blue-400 bg-blue-50' 
                         : 'border-gray-200 hover:border-gray-400'
                     }`}
-                    onClick={() => setPaymentMethod('card')}
+                    onClick={() => setPaymentMethod('razorpay')}
                   >
                     <div className="text-center">
                       <CreditCard className={`h-8 w-8 mx-auto mb-2 ${
-                        paymentMethod === 'card' ? 'text-indigo-600' : 'text-gray-600'
+                        paymentMethod === 'razorpay' ? 'text-blue-600' : 'text-gray-600'
                       }`} />
                       <p className={`font-semibold ${
-                        paymentMethod === 'card' ? 'text-indigo-900' : 'text-gray-900'
-                      }`}>Card Payment</p>
+                        paymentMethod === 'razorpay' ? 'text-blue-900' : 'text-gray-900'
+                      }`}>Razorpay</p>
                       <p className={`text-sm ${
-                        paymentMethod === 'card' ? 'text-indigo-600' : 'text-gray-600'
-                      }`}>Credit/Debit Cards</p>
-                    </div>
-                  </div>
-                  <div 
-                    className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                      paymentMethod === 'upi' 
-                        ? 'border-green-400 bg-green-50' 
-                        : 'border-gray-200 hover:border-gray-400'
-                    }`}
-                    onClick={() => setPaymentMethod('upi')}
-                  >
-                    <div className="text-center">
-                      <Phone className={`h-8 w-8 mx-auto mb-2 ${
-                        paymentMethod === 'upi' ? 'text-green-600' : 'text-gray-600'
-                      }`} />
-                      <p className={`font-semibold ${
-                        paymentMethod === 'upi' ? 'text-green-900' : 'text-gray-900'
-                      }`}>UPI Payment</p>
-                      <p className={`text-sm ${
-                        paymentMethod === 'upi' ? 'text-green-600' : 'text-gray-600'
-                      }`}>PhonePe, GPay, Paytm</p>
+                        paymentMethod === 'razorpay' ? 'text-blue-600' : 'text-gray-600'
+                      }`}>Cards, UPI, Wallets</p>
                     </div>
                   </div>
                   <div 
@@ -614,42 +794,33 @@ export default function Checkout() {
                   </div>
                 )}
                 
-                {paymentMethod === 'upi' && !showUpiDetails && (
+                {paymentMethod === 'razorpay' && (
                   <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <p className="text-sm text-blue-800">
-                      📱 Click "Place Order" to proceed with UPI payment. You'll get payment details in the next step.
+                      💳 Secure payment with Cards, UPI, Net Banking & Wallets via Razorpay
                     </p>
                   </div>
                 )}
-                
-                {paymentMethod === 'card' && (
-                  <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <p className="text-sm text-yellow-800">
-                      💳 Payment gateway integration will be implemented here (Razorpay, Stripe, etc.)
-                    </p>
-                  </div>
-                )}
-                </CardContent>
-              </Card>
-            )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Order Summary */}
-          <div className={showUpiDetails && paymentMethod === 'upi' ? 'lg:col-span-3' : ''}>
+          <div>
             <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm sticky top-4">
-              <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-t-lg">
+              <CardHeader className="bg-orange-600 text-white rounded-t-lg">
                 <CardTitle className="flex items-center gap-2">
                   <ShoppingBag className="h-5 w-5" />
                   Order Summary
                 </CardTitle>
-                <CardDescription className="text-purple-100">
+                <CardDescription className="text-orange-100">
                   {cart?.products.length} item(s)
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-6">
                 <div className="space-y-4 max-h-64 overflow-y-auto">
-                  {cart?.products.filter(item => item.product).map((item) => (
-                    <div key={`${item._id}-${item.size}`} className="flex items-center space-x-3">
+                  {cart?.products.filter(item => item.product).map((item, index) => (
+                    <div key={`${item._id}-${item.size || 'no-size'}-${index}`} className="flex items-center space-x-3">
                       <div className="relative w-12 h-12 bg-gray-200 rounded-md overflow-hidden flex-shrink-0">
                         {item.product?.images?.[0] && (
                           <Image
@@ -673,10 +844,17 @@ export default function Checkout() {
                               {item.size}
                             </Badge>
                           )}
+                          {item.color && (
+                            <Badge variant="outline" className="text-xs">
+                              {item.color}
+                            </Badge>
+                          )}
                         </div>
                       </div>
-                      <div className="text-sm font-medium text-gray-900">
-                        ₹{item.totalPrice.toFixed(2)}
+                      <div className="flex items-center gap-2">
+                        <div className="text-sm font-medium text-gray-900">
+                          ₹{item.totalPrice.toFixed(2)}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -691,10 +869,10 @@ export default function Checkout() {
                   </div>
                   <div className="flex justify-between">
                     <span>Shipping</span>
-                    <span>₹{shipping.toFixed(2)}</span>
+                    <span>{shipping === 0 ? 'Free Shipping' : `₹${shipping.toFixed(2)}`}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>GST (18%)</span>
+                    <span>GST ({cart?.products?.[0]?.product?.taxRate !== undefined ? cart.products[0].product.taxRate : 18}%)</span>
                     <span>₹{tax.toFixed(2)}</span>
                   </div>
                   <Separator />
@@ -708,17 +886,17 @@ export default function Checkout() {
                 <Button 
                   onClick={handlePlaceOrder}
                   disabled={orderLoading || !cart || cart.products.length === 0}
-                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {orderLoading ? (
                     <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <div className="relative">
+                        <div className="w-4 h-4 border-2 border-white/30 rounded-full animate-spin border-t-white"></div>
+                      </div>
                       Placing Order...
                     </div>
-                  ) : paymentMethod === 'upi' && !showUpiDetails ? (
-                    `Proceed to UPI Payment - ₹${total.toFixed(2)}`
-                  ) : paymentMethod === 'upi' && showUpiDetails ? (
-                    `Complete Order - ₹${total.toFixed(2)}`
+                  ) : paymentMethod === 'razorpay' ? (
+                    `Pay with Razorpay - ₹${total.toFixed(2)}`
                   ) : (
                     `Place Order - ₹${total.toFixed(2)}`
                   )}

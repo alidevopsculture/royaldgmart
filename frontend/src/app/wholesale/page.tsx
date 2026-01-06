@@ -38,7 +38,7 @@ export default function Wholesale() {
 
   return (
     <>
-      <section className="relative w-full h-[320px] md:h-[400px] flex items-center justify-center mb-8 overflow-hidden">
+      <section className="relative w-full h-[520px] md:h-[600px] flex items-center justify-center mb-8 overflow-hidden">
         <Image src="/banners/landscape-09.png" alt="Wholesale Banner" fill priority className="object-cover opacity-100" />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center z-10">
           <h1 className="text-4xl md:text-5xl font-extrabold text-white drop-shadow mb-4" style={{ fontFamily: 'Quicksand, sans-serif' }}>Wholesale</h1>
@@ -67,7 +67,7 @@ export default function Wholesale() {
               <p className="text-gray-500 text-lg">No wholesale products available at the moment.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
               {products.map((product) => (
                 <WholesaleProductCard key={product._id} product={product} />
               ))}

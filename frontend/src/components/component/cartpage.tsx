@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getAllCarts, removeFromCart } from "@/actions/cart"
+import { getAllCarts, removeFromCart, updateCartItem } from "@/actions/cart"
 import { getUserData } from "@/actions/auth"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -36,6 +36,8 @@ export default function CartPage() {
         
         let cart: Cart = await getAllCarts(cartIdentifier);
         console.log('Fetched cart:', cart);
+        console.log('Raw cart products:', cart?.products);
+        console.log('Cart products count:', cart?.products?.length || 0);
         
         // Filter out wholesale products from regular cart
         const regularCart = {
@@ -80,6 +82,35 @@ export default function CartPage() {
 
     fetchData();
   }, []);
+
+  const handleUpdateQuantity = async (productId: string, newQuantity: number) => {
+    if (newQuantity < 1) return;
+    
+    try {
+      const cartIdentifier = await getCartIdentifier(user);
+      const result = await updateCartItem({ ...cartIdentifier, productId, quantity: newQuantity });
+      
+      if (result.success) {
+        // Update cart data after quantity change
+        const updatedCart = await getAllCarts(cartIdentifier);
+        const regularCart = {
+          ...updatedCart,
+          products: updatedCart.products?.filter((item: any) => 
+            item.product && item.product.category !== 'WHOLESALE'
+          ) || []
+        };
+        setCartData(regularCart);
+        
+        // Dispatch a custom event to notify navbar to update cart count
+        window.dispatchEvent(new CustomEvent('cartUpdated'));
+      } else {
+        toast.error(result.error || "Failed to update quantity");
+      }
+    } catch (error) {
+      console.error("Error updating quantity:", error);
+      toast.error("Failed to update quantity");
+    }
+  };
 
   const handleRemoveItem = async (productId: string) => {
     try {
@@ -158,6 +189,21 @@ export default function CartPage() {
     return cartData.products.reduce((total: number, item: CartItem) => total + item.totalPrice, 0);
   };
 
+  const calculateShipping = () => {
+    if (!cartData?.products || cartData.products.length === 0) return 0;
+    const firstProduct = cartData.products[0]?.product;
+    // Use 0 if shippingCharges is explicitly set to 0, otherwise use 50 as fallback only if undefined
+    return firstProduct?.shippingCharges !== undefined ? firstProduct.shippingCharges : 50;
+  };
+  
+  const calculateTax = (subtotal: number) => {
+    if (!cartData?.products || cartData.products.length === 0) return 0;
+    const firstProduct = cartData.products[0]?.product;
+    // Use 0 if taxRate is explicitly set to 0, otherwise use 18 as fallback only if undefined
+    const taxRate = firstProduct?.taxRate !== undefined ? firstProduct.taxRate : 18;
+    return (subtotal * taxRate) / 100;
+  };
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -203,7 +249,7 @@ export default function CartPage() {
           <h2 className="text-2xl font-bold">Your Cart ({validCartItems.length} items)</h2>
           <button 
             onClick={() => window.location.reload()} 
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700"
           >
             Refresh Cart
           </button>
@@ -213,8 +259,8 @@ export default function CartPage() {
           {/* Cart Items */}
           <div className="lg:col-span-2">
             <div className="space-y-6">
-              {validCartItems.map((item: CartItem) => (
-                <Card key={`${item.product._id}-${item.size}`} className="overflow-hidden">
+              {validCartItems.map((item: CartItem, index: number) => (
+                <Card key={`${item.product._id}-${item.size || 'no-size'}-${index}`} className="overflow-hidden">
                   <CardContent className="p-6">
                     <div className="flex flex-col sm:flex-row gap-4">
                       <div className="flex-shrink-0 mx-auto sm:mx-0">
@@ -237,8 +283,33 @@ export default function CartPage() {
                           <p className="text-sm text-muted-foreground mt-1">Size: {item.size}</p>
                         )}
                         <p className="text-base sm:text-lg font-bold mt-2">₹{item.purchasePrice.toFixed(2)}</p>
-                        <p className="text-sm text-muted-foreground mt-1">Quantity: {item.quantity}</p>
-                        <p className="text-base sm:text-lg font-bold mt-2">Total: ₹{item.totalPrice.toFixed(2)}</p>
+                        
+                        {/* Quantity Controls */}
+                        <div className="flex items-center gap-3 mt-3">
+                          <span className="text-sm text-muted-foreground">Quantity:</span>
+                          <div className="flex items-center gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleUpdateQuantity(item.product._id, item.quantity - 1)}
+                              disabled={item.quantity <= 1}
+                              className="h-8 w-8 p-0"
+                            >
+                              -
+                            </Button>
+                            <span className="min-w-[2rem] text-center font-medium">{item.quantity}</span>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleUpdateQuantity(item.product._id, item.quantity + 1)}
+                              className="h-8 w-8 p-0"
+                            >
+                              +
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        <p className="text-base sm:text-lg font-bold mt-2">Total: ₹{(item.purchasePrice * item.quantity).toFixed(2)}</p>
                       </div>
                       
                       <div className="flex-shrink-0 w-full sm:w-auto">
@@ -264,22 +335,41 @@ export default function CartPage() {
                 <CardTitle>Order Summary</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Items in Order Summary */}
+                <div className="space-y-3 border-b pb-4">
+                  {validCartItems.map((item: CartItem, index: number) => (
+                    <div key={`summary-${item.product._id}-${index}`} className="flex justify-between items-start text-sm">
+                      <div className="flex-1 pr-2">
+                        <p className="font-medium leading-tight">{item.product.name}</p>
+                        {item.size && <p className="text-xs text-muted-foreground">Size: {item.size}</p>}
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="min-w-[4rem] text-right font-medium">₹{item.totalPrice.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
                 <div className="flex justify-between">
                   <span>Subtotal</span>
                   <span>₹{grandTotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>GST (18%)</span>
-                  <span>₹{(grandTotal * 0.18).toFixed(2)}</span>
+                  <span>Shipping</span>
+                  <span>{calculateShipping() === 0 ? 'Free Shipping' : `₹${calculateShipping().toFixed(2)}`}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>GST (5%)</span>
+                  <span>₹{calculateTax(grandTotal).toFixed(2)}</span>
                 </div>
                 <div className="border-t pt-4 flex justify-between font-bold text-lg">
                   <span>Total</span>
-                  <span>₹{(grandTotal * 1.18).toFixed(2)}</span>
+                  <span>₹{(grandTotal + calculateShipping() + calculateTax(grandTotal)).toFixed(2)}</span>
                 </div>
               </CardContent>
               <CardFooter>
                 <Button 
-                  className="w-full" 
+                  className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold" 
                   size="lg"
                   onClick={handleProceedToCheckout}
                 >

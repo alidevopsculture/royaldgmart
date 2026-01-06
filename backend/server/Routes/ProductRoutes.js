@@ -135,8 +135,8 @@ router.post('/' , auth, role.check('admin'), upload.array('images[]', 7), async 
    
     
 
-    if (!name || !price) {
-      return res.status(400).json({ message: 'Missing required fields: name and price' });
+    if (!name || !price || !category) {
+      return res.status(400).json({ message: 'Missing required fields: name, price, and category' });
     }
 
     if (typeof availableSizesColors === 'string') {
@@ -244,7 +244,7 @@ router.get('/search', async (req, res) => {
     let filter = {};
 
     if (category) {
-      filter.category = category;
+      filter.category = { $regex: new RegExp(`^${category}$`, 'i') };
     }
 
     if (query) {
@@ -291,7 +291,7 @@ router.get('/'    ,    async (req, res) => {
     }
     
     if (category) {
-      query.category = category;
+      query.category = { $regex: new RegExp(`^${category}$`, 'i') };
     }
 
     const options = {
@@ -355,7 +355,7 @@ router.get('/category/:category' ,  async (req, res) => {
       const order = req.query.order === 'asc' ? 1 : -1;
       const subCategory = req.query.subCategory;
   
-      let query = { category: category };
+      let query = { category: { $regex: new RegExp(`^${category}$`, 'i') } };
   
      
       if (subCategory) {
@@ -439,11 +439,23 @@ router.get('/category/:category' ,  async (req, res) => {
         });
         imageUrls = await Promise.all(uploadPromises);
         imageUrls = imageUrls.filter((item) => item !== null);
-        updateData.images = [...(updateData.prevImgs || []), ...imageUrls];
-        if(thumbnail){
-          updateData.thumbnail = thumbnail;
-        }
       }
+      
+      // Handle image updates properly
+      if (imageUrls.length > 0) {
+        // If new images are uploaded, combine with existing images from prevImgs
+        updateData.images = [...(updateData.prevImgs || []), ...imageUrls];
+      } else if (updateData.prevImgs) {
+        // If no new images but prevImgs exists, use prevImgs
+        updateData.images = updateData.prevImgs;
+      }
+      
+      if(thumbnail){
+        updateData.thumbnail = thumbnail;
+      }
+      
+      // Remove prevImgs from updateData as it's not needed in the database
+      delete updateData.prevImgs;
   
       const updatedProduct = await Product.findByIdAndUpdate(
         id,

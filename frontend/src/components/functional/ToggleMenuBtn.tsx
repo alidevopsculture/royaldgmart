@@ -1,5 +1,5 @@
 'use client'
-import { Building2, Contact2, Cross, CrossIcon, LayoutPanelLeft, MenuIcon, ShoppingCartIcon, UserRound, X } from "lucide-react";
+import { Building2, Contact2, Cross, CrossIcon, LayoutPanelLeft, MenuIcon, ShoppingCartIcon, UserRound, X, LogOut } from "lucide-react";
 import { Button } from "../ui/button";
 import { useState } from "react";
 import Link from "next/link";
@@ -88,41 +88,21 @@ export default function ToggleMenuBtn({user}:ToggleMenuBtnProps ){
                     </div>
                     </Link>}
                     {user ? (
-                    // <DropdownMenu>
-                    //     <DropdownMenuTrigger asChild>
-                    //     <Button variant="ghost" size="icon" className="rounded-full">
-                    //         <Avatar className="h-8 w-8">
-                    //         <AvatarImage src="/placeholder-user.jpg" />
-                    //         <AvatarFallback>{user?.username?.charAt(0).toUpperCase()}</AvatarFallback>
-                    //         </Avatar>
-                    //         <span className="sr-only">Toggle user menu</span>
-                    //     </Button>
-                    //     </DropdownMenuTrigger>
-                    //     <DropdownMenuContent align="end">
-                    //     <DropdownMenuItem>
-                    //         <Link href="#" className="flex items-center gap-2" prefetch={false}>
-                    //         <div className="h-4 w-4" />
-                    //         <span>Profile</span>
-                    //         </Link>
-                    //     </DropdownMenuItem>
-                    //     <DropdownMenuItem>
-                    //         <Link href="#" className="flex items-center gap-2" prefetch={false}>
-                    //         <div className="h-4 w-4" />
-                    //         <span>Settings</span>
-                    //         </Link>
-                    //     </DropdownMenuItem>
-                    //     <DropdownMenuSeparator />
-                    //     <DropdownMenuItem>
-                    //         <LogoutBtn/>
-                    //     </DropdownMenuItem>
-                    //     </DropdownMenuContent>
-                    // </DropdownMenu>
-                    <Link href="/profile" className="hover:underline" prefetch={false}>
-                        <div className=" flex w-full justify-start items-center gap-3">
-                            <UserRound/>
-                            <p>Profile</p>
-                        </div>
-                    </Link>
+                    <>
+                        <Link href="/wholesale-cart" className="hover:underline" prefetch={false}>
+                            <div className=" flex w-full justify-start items-center gap-3">
+                                <ShoppingCartIcon/>
+                                <p>Wholesale Cart</p>
+                            </div>
+                        </Link>
+                        <Link href="/profile" className="hover:underline" prefetch={false}>
+                            <div className=" flex w-full justify-start items-center gap-3">
+                                <UserRound/>
+                                <p>Profile</p>
+                            </div>
+                        </Link>
+                        <LogoutBtn/>
+                    </>
                     ) : (
                     <div className="flex gap-2">
                         <Link href="/auth" className="text-sm font-medium hover:underline underline-offset-4" prefetch={false}>

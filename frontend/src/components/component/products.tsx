@@ -47,7 +47,6 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { useRouter } from "next/navigation";
-import { getProducts } from "@/actions/product";
 import toast from "react-hot-toast";
 
 type Product = {
@@ -111,15 +110,43 @@ export function Products() {
   // ].
   useEffect(() => {
     const fetchProducts = async () => {
-      const res = await getProducts({ limit: 10, page: 1 });
-      // Filter out wholesale products from regular products
-      const regularProducts = res.products?.filter((product: any) => 
-        product.category !== 'WHOLESALE'
-      ) || [];
-      setAllProducts(regularProducts);
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products?limit=100&page=1`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch products: ${response.status}`);
+        }
+        
+        const res = await response.json();
+        console.log('Fetched products:', res);
+        // Filter out wholesale products from regular products
+        const regularProducts = res.products?.filter((product: any) => 
+          product.category !== 'WHOLESALE'
+        ) || [];
+        setAllProducts(regularProducts);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        toast.error('Failed to load products');
+      }
     };
 
     fetchProducts();
+    
+    // Listen for product updates
+    const handleProductUpdate = () => {
+      fetchProducts();
+    };
+    
+    window.addEventListener('productUpdated', handleProductUpdate);
+    
+    return () => {
+      window.removeEventListener('productUpdated', handleProductUpdate);
+    };
   }, []);
   // console.log(allProducts);
 
@@ -147,6 +174,10 @@ export function Products() {
   };
 
 const handleDelete = async (productId: string) => {
+  if (!confirm('Are you sure you want to delete this product?')) {
+    return;
+  }
+  
   try {
     // Get token from cookie
     const token = document.cookie
@@ -167,6 +198,9 @@ const handleDelete = async (productId: string) => {
 
     setAllProducts((prev) => prev.filter((p) => p._id !== productId));
     toast.success("Product deleted successfully!");
+    
+    // Dispatch event to notify other components
+    window.dispatchEvent(new CustomEvent('productUpdated'));
   } catch (error) {
     console.error("Error deleting product:", error);
     toast.error("Failed to delete product.");

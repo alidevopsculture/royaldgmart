@@ -51,7 +51,7 @@ export default async function Homepage({ user }: { user: any }) {
 
 
   return (
-    <div className="flex flex-col min-h-screen overflow-x-hidden bg-gradient-to-br from-gray-50 to-white">
+    <div className="flex flex-col min-h-screen overflow-x-hidden bg-gradient-to-br from-amber-25 to-stone-50/80">
       <NotificationPopup />
       <main className="flex-1">
         {/* Hero Section - Modern Classic */}
@@ -96,9 +96,6 @@ export default async function Homepage({ user }: { user: any }) {
                         <p className="text-lg sm:text-xl md:text-2xl font-light opacity-95 max-w-2xl mx-auto">
                           {slide.subtitle}
                         </p>
-                        <Button className="bg-white/95 text-black hover:bg-white px-8 py-4 text-base sm:text-lg font-medium rounded-full shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105">
-                          Explore Collection
-                        </Button>
                       </div>
                     </div>
                   </div>
@@ -115,10 +112,11 @@ export default async function Homepage({ user }: { user: any }) {
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-12 sm:mb-16">
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-light text-gray-900 mb-4">
-                New Arrivals
+                Be the first to know!
               </h2>
-              <p className="text-lg sm:text-xl text-gray-600 font-light max-w-2xl mx-auto">
-                Discover our latest collection of handpicked designs
+              <p className="text-lg sm:text-xl text-gray-600 font-light italic-bold font-[cursive] max-w-2xl mx-auto">
+                “about every new drop and special collection we release. Your favourites may arrive at any moment, so this space is always worth a second look.”
+                
               </p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
@@ -130,12 +128,25 @@ export default async function Homepage({ user }: { user: any }) {
                 ))
               ) : (
                 <div className="col-span-full text-center py-16">
-                  <div className="text-gray-400 text-lg font-light">
-                    No new arrivals found. Please check your product data.
-                  </div>
-                </div>
+  <div className="text-black-400 text-lg font-light italic-bold font-[cursive]">
+    "Wear the culture, not trends — let every thread tell your story. Every design is chosen to reflect the elegance of tradition with the comfort you need every day.
+    Each product is carefully checked for fabric, finishing and detailing before it reaches this section. That way you can shop with confidence, trusting the quality on your screen will match what arrives at your door."
+  </div>
+</div>
+
               )}
             </div>
+            
+            {/* Second row of products */}
+            {transformedProducts && transformedProducts.length > 4 && (
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8 mt-6 sm:mt-8">
+                {transformedProducts.slice(4, 8).map((product) => (
+                  <div key={product._id}>
+                    <ProductCard product={product} />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
@@ -144,10 +155,10 @@ export default async function Homepage({ user }: { user: any }) {
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-12 sm:mb-16">
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-light text-gray-900 mb-4">
-                Our Collections
+                Pick from Collections
               </h2>
               <p className="text-lg sm:text-xl text-gray-600 font-light max-w-2xl mx-auto">
-                Curated categories for every occasion and style
+                Curated collections for every occasion and style
               </p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
@@ -199,13 +210,6 @@ export default async function Homepage({ user }: { user: any }) {
               <p className="text-xl sm:text-2xl font-light opacity-95 max-w-2xl">
                 Your Fairytale Chapter Starts Here
               </p>
-              <Link
-                href="/collections/bridal"
-                className="inline-block px-8 py-4 bg-white/95 text-black font-medium rounded-full shadow-xl hover:bg-white transition-all duration-300 hover:scale-105 backdrop-blur-sm"
-                prefetch={false}
-              >
-                Discover Collection
-              </Link>
             </div>
           </div>
         </section>
@@ -367,13 +371,6 @@ export default async function Homepage({ user }: { user: any }) {
                           <p className="text-white text-sm mb-4 opacity-90">
                             {cat.subtitle}
                           </p>
-                          <Link
-                            href="#"
-                            className="inline-flex items-center justify-center rounded-full bg-white/90 text-black px-4 py-2 text-sm font-bold w-fit"
-                            prefetch={false}
-                          >
-                            {cat.buttonText}
-                          </Link>
                         </div>
                       </div>
                     </CarouselItem>
@@ -393,19 +390,19 @@ export default async function Homepage({ user }: { user: any }) {
                       name: "Forever Bride",
                       img: "/banners/landscape-08.png",
                       subtitle: "Your Fairytale Chapter Starts Here",
-                      buttonText: "Shop Now",
+                    
                     },
                     {
                       name: "Modern Muse",
                       img: "/banners/landscape-07.png",
                       subtitle: "Elegant Looks, Effortless Vibes",
-                      buttonText: "Explore Now",
+                    
                     },
                     {
                       name: "Classic Edit",
                       img: "/banners/landscape-06.png",
                       subtitle: "Traditional Magic, Timeless Style",
-                      buttonText: "See Collection",
+                      
                     },
                   ].map((cat) => (
                     <CarouselItem
@@ -426,13 +423,6 @@ export default async function Homepage({ user }: { user: any }) {
                           <p className="text-white text-2xl font-medium mb-8 drop-shadow-lg opacity-95">
                             {cat.subtitle}
                           </p>
-                          <Link
-                            href="#"
-                            className="inline-flex items-center justify-center rounded-full bg-white/90 text-black px-12 py-5 text-xl font-bold shadow-2xl hover:bg-white transition w-fit"
-                            prefetch={false}
-                          >
-                            {cat.buttonText}
-                          </Link>
                         </div>
                       </div>
                     </CarouselItem>
@@ -457,15 +447,6 @@ export default async function Homepage({ user }: { user: any }) {
                 Discover exceptional pieces for your festive and wedding wardrobe.
                 Embrace elegance with our curated premium collection.
               </p>
-              <div className="pt-4">
-                <Link
-                  href="/collections/festive"
-                  className="inline-block px-12 py-5 rounded-full bg-gradient-to-r from-gray-900 to-gray-700 text-white text-lg font-medium shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
-                  prefetch={false}
-                >
-                  Explore Collection
-                </Link>
-              </div>
             </div>
           </div>
         </section>
@@ -584,7 +565,7 @@ function CategoryCard({
       <img
         src={img}
         alt={title}
-        className="object-cover object-center w-full h-full transition-transform duration-700 group-hover:scale-110"
+        className="object-cover object-center w-full h-full transition-transform duration-700 group-hover:scale-105"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
       <div className="absolute inset-0 flex flex-col justify-end p-4 sm:p-6 md:p-8">

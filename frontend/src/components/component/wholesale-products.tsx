@@ -111,15 +111,43 @@ export function WholesaleProducts() {
   // ].
   useEffect(() => {
     const fetchProducts = async () => {
-      const res = await getProducts({ limit: 10, page: 1 });
-      // Filter only wholesale products
-      const wholesaleProducts = res.products?.filter((product: any) => 
-        product.category === 'WHOLESALE'
-      ) || [];
-      setAllProducts(wholesaleProducts);
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products?limit=100&page=1`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch products: ${response.status}`);
+        }
+        
+        const res = await response.json();
+        console.log('Fetched wholesale products:', res);
+        // Filter only wholesale products
+        const wholesaleProducts = res.products?.filter((product: any) => 
+          product.category === 'WHOLESALE'
+        ) || [];
+        setAllProducts(wholesaleProducts);
+      } catch (error) {
+        console.error('Error fetching wholesale products:', error);
+        toast.error('Failed to load wholesale products');
+      }
     };
 
     fetchProducts();
+    
+    // Listen for product updates
+    const handleProductUpdate = () => {
+      fetchProducts();
+    };
+    
+    window.addEventListener('productUpdated', handleProductUpdate);
+    
+    return () => {
+      window.removeEventListener('productUpdated', handleProductUpdate);
+    };
   }, []);
   // console.log(allProducts);
 
@@ -147,6 +175,10 @@ export function WholesaleProducts() {
   };
 
 const handleDelete = async (productId: string) => {
+  if (!confirm('Are you sure you want to delete this wholesale product?')) {
+    return;
+  }
+  
   try {
     // Get token from cookie
     const token = document.cookie
@@ -166,10 +198,13 @@ const handleDelete = async (productId: string) => {
     if (!response.ok) throw new Error("Failed to delete");
 
     setAllProducts((prev) => prev.filter((p) => p._id !== productId));
-    toast.success("Product deleted successfully!");
+    toast.success("Wholesale product deleted successfully!");
+    
+    // Dispatch event to notify other components
+    window.dispatchEvent(new CustomEvent('productUpdated'));
   } catch (error) {
-    console.error("Error deleting product:", error);
-    toast.error("Failed to delete product.");
+    console.error("Error deleting wholesale product:", error);
+    toast.error("Failed to delete wholesale product.");
   }
 };
 

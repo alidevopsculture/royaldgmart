@@ -36,6 +36,7 @@ const notificationRoutes = require('./Routes/notificationRoutes');
 const adminRoutes = require('./Routes/AdminRoutes');
 const reviewRoutes = require('./Routes/ReviewRoutes');
 const wholesaleSettingsRoutes = require('./Routes/WholesaleSettingsRoutes');
+const paymentRoutes = require('./Routes/PaymentRoutes');
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 
@@ -154,6 +155,7 @@ app.use('/api/notifications' , notificationRoutes);
 app.use('/api/admin' , adminRoutes);
 app.use('/api/reviews' , reviewRoutes);
 app.use('/api/wholesale-settings' , wholesaleSettingsRoutes);
+app.use('/api/payments' , paymentRoutes);
 
 
 
