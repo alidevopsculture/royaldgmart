@@ -162,19 +162,11 @@ export default function WholesaleCartPage() {
                   <>
                     <div className="flex justify-between">
                       <span>Subtotal</span>
-                      <span>₹{cartData.calculations.subtotal.toFixed(2)}</span>
+                      <span>₹{(cartData.calculations.subtotal - cartData.calculations.discount + cartData.calculations.tax).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Wholesale Discount ({cartData.calculations.discountPercentage}%)</span>
                       <span className="text-green-600">-₹{cartData.calculations.discount.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>After Discount</span>
-                      <span>₹{(cartData.calculations.subtotal - cartData.calculations.discount).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>GST ({cartData.calculations.taxPercentage}%)</span>
-                      <span>₹{cartData.calculations.tax.toFixed(2)}</span>
                     </div>
                     <div className="border-t pt-4 flex justify-between font-bold text-lg">
                       <span>Total</span>
@@ -185,19 +177,11 @@ export default function WholesaleCartPage() {
                   <>
                     <div className="flex justify-between">
                       <span>Subtotal</span>
-                      <span>₹{grandTotal.toFixed(2)}</span>
+                      <span>₹{(grandTotal * 0.9 + (grandTotal * 0.9) * 0.18).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Wholesale Discount (10%)</span>
                       <span className="text-green-600">-₹{(grandTotal * 0.1).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>After Discount</span>
-                      <span>₹{(grandTotal * 0.9).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>GST (18%)</span>
-                      <span>₹{((grandTotal * 0.9) * 0.18).toFixed(2)}</span>
                     </div>
                     <div className="border-t pt-4 flex justify-between font-bold text-lg">
                       <span>Total</span>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import ProductCard from '@/components/functional/ProductCard';
 import { productData } from '@/types/product';
@@ -8,22 +8,49 @@ import { productData } from '@/types/product';
 export default function Blankets() {
   const [products, setProducts] = useState<productData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const observer = useRef<IntersectionObserver | null>(null);
+
+  const fetchProducts = async (pageNum: number) => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products?category=BLANKETS&page=${pageNum}&limit=20`);
+      if (!response.ok) throw new Error('Failed to fetch products');
+      const data = await response.json();
+      
+      const newProducts = data.products || [];
+      setProducts(prev => pageNum === 1 ? newProducts : [...prev, ...newProducts]);
+      setHasMore(data.hasNextPage || false);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products?category=BLANKETS`);
-        if (!response.ok) throw new Error('Failed to fetch products');
-        const data = await response.json();
-        setProducts(data.products || data || []);
-      } catch (error) {
-        console.error('Error fetching products:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProducts();
+    fetchProducts(1);
   }, []);
+
+  const lastProductRef = useCallback((node: HTMLDivElement) => {
+    if (loadingMore) return;
+    if (observer.current) observer.current.disconnect();
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) {
+        setLoadingMore(true);
+        setPage(prev => prev + 1);
+      }
+    });
+    if (node) observer.current.observe(node);
+  }, [loadingMore, hasMore]);
+
+  useEffect(() => {
+    if (page > 1) {
+      fetchProducts(page);
+    }
+  }, [page]);
 
   if (loading) {
     return (
@@ -65,15 +92,23 @@ export default function Blankets() {
         <section id="products">
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
             {products && products.length > 0 ? (
-              products.map((product) => (
-                <ProductCard key={product._id} product={product} />
-              ))
+              products.map((product, index) => {
+                if (products.length === index + 1) {
+                  return <div key={product._id} ref={lastProductRef}><ProductCard product={product} /></div>;
+                }
+                return <ProductCard key={product._id} product={product} />;
+              })
             ) : (
               <div className="col-span-full text-center py-12">
                 <p className="text-gray-500 text-lg">No blankets found</p>
               </div>
             )}
           </div>
+          {loadingMore && (
+            <div className="flex justify-center items-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-pink-500"></div>
+            </div>
+          )}
         </section>
 
       </div>

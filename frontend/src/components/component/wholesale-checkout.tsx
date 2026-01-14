@@ -559,23 +559,15 @@ export default function WholesaleCheckout() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
-                    <span>₹{subtotal.toFixed(2)}</span>
+                    <span>₹{(discountedSubtotal + tax).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-green-600">
                     <span>Wholesale Discount ({cart?.calculations?.discountPercentage || wholesaleSettings?.wholesaleDiscount || 10}%)</span>
                     <span>-₹{discount.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>After Discount</span>
-                    <span>₹{discountedSubtotal.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
                     <span>Shipping</span>
                     <span>₹{shipping.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>GST ({cart?.calculations?.taxPercentage || wholesaleSettings?.taxRate || 18}%)</span>
-                    <span>₹{tax.toFixed(2)}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between text-lg font-bold">

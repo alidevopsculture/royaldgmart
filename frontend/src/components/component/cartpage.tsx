@@ -352,15 +352,11 @@ export default function CartPage() {
                 
                 <div className="flex justify-between">
                   <span>Subtotal</span>
-                  <span>₹{grandTotal.toFixed(2)}</span>
+                  <span>₹{(grandTotal + calculateTax(grandTotal)).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Shipping</span>
                   <span>{calculateShipping() === 0 ? 'Free Shipping' : `₹${calculateShipping().toFixed(2)}`}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>GST (5%)</span>
-                  <span>₹{calculateTax(grandTotal).toFixed(2)}</span>
                 </div>
                 <div className="border-t pt-4 flex justify-between font-bold text-lg">
                   <span>Total</span>
