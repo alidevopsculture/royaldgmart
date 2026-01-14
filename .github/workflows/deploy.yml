@@ -54,8 +54,8 @@ jobs:
         host: ${{ secrets.EC2_HOST }}
         username: ubuntu
         key: ${{ secrets.EC2_SSH_KEY }}
+        command_timeout: 30m
         script: |
-          # Pull latest images
           docker pull ${{ secrets.DOCKER_USERNAME }}/rdgm-backend:latest
           docker pull ${{ secrets.DOCKER_USERNAME }}/rdgm-frontend:latest
           
