@@ -85,7 +85,7 @@ export function Createproduct() {
     most_selling_product: false, // Default to false (not user-selectable)
     isNew: true, // Default to true for new products
     productDiscount: 0, // Initialize with 0
-    taxPercentage: 18, // Default GST rate
+    taxPercentage: 0, // Default 0 - optional
     shippingCharges: 50, // Default shipping charges
     product_specification: {
       material: '',
@@ -285,13 +285,13 @@ export function Createproduct() {
             <Label htmlFor="tax">Tax & Shipping Configuration</Label>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="tax-percentage">Tax Rate (%)</Label>
+                <Label htmlFor="tax-percentage">Tax Rate (%) - Optional</Label>
                 <Input 
                   value={otherData.taxPercentage} 
                   onChange={(e)=>setOtherData({...otherData,taxPercentage:parseFloat(e.target.value) || 0})} 
                   id="tax-percentage" 
                   type="number" 
-                  placeholder="18" 
+                  placeholder="0" 
                   min="0" 
                   max="100" 
                   step="0.01"
@@ -317,7 +317,9 @@ export function Createproduct() {
                 {otherData.productDiscount > 0 && (
                   <div>Discount ({otherData.productDiscount}%): -₹{((otherData.price * otherData.productDiscount) / 100).toFixed(2)}</div>
                 )}
-                <div>Tax ({otherData.taxPercentage}%): +₹{((otherData.price * (100 - otherData.productDiscount) / 100) * otherData.taxPercentage / 100).toFixed(2)}</div>
+                {otherData.taxPercentage > 0 && (
+                  <div>Tax ({otherData.taxPercentage}%): +₹{((otherData.price * (100 - otherData.productDiscount) / 100) * otherData.taxPercentage / 100).toFixed(2)}</div>
+                )}
                 <div>Shipping: +₹{otherData.shippingCharges}</div>
                 <div className="font-semibold border-t pt-1 text-lg text-green-600">Total Amount: ₹{(otherData.price * (100 - otherData.productDiscount) / 100 * (100 + otherData.taxPercentage) / 100 + otherData.shippingCharges).toFixed(2)}</div>
               </div>

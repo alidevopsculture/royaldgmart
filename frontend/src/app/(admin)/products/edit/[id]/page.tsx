@@ -336,13 +336,13 @@ export default function EditProduct() {
             <Label htmlFor="tax">Tax & Shipping Configuration</Label>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="tax-percentage">Tax Rate (%)</Label>
+                <Label htmlFor="tax-percentage">Tax Rate (%) - Optional</Label>
                 <Input 
-                  value={product.taxRate || 18} 
+                  value={product.taxRate || 0} 
                   onChange={(e)=>setProduct({...product, taxRate: parseFloat(e.target.value) || 0})} 
                   id="tax-percentage" 
                   type="number" 
-                  placeholder="18" 
+                  placeholder="0" 
                   min="0" 
                   max="100" 
                   step="0.01"
@@ -371,9 +371,11 @@ export default function EditProduct() {
                 {product.discountPercentage > 0 && (
                   <div>Discount ({product.discountPercentage}%): -₹{((product.price * product.discountPercentage) / 100).toFixed(2)}</div>
                 )}
-                <div>Tax ({product.taxRate || 18}%): +₹{((product.price * (100 - product.discountPercentage) / 100) * (product.taxRate || 18) / 100).toFixed(2)}</div>
+                {(product.taxRate || 0) > 0 && (
+                  <div>Tax ({product.taxRate}%): +₹{((product.price * (100 - product.discountPercentage) / 100) * (product.taxRate || 0) / 100).toFixed(2)}</div>
+                )}
                 <div>Shipping: +₹{product.shippingCharges !== undefined ? product.shippingCharges : 50}</div>
-                <div className="font-semibold border-t pt-1 text-lg text-green-600">Total Amount: ₹{(product.price * (100 - product.discountPercentage) / 100 * (100 + (product.taxRate || 18)) / 100 + (product.shippingCharges !== undefined ? product.shippingCharges : 50)).toFixed(2)}</div>
+                <div className="font-semibold border-t pt-1 text-lg text-green-600">Total Amount: ₹{(product.price * (100 - product.discountPercentage) / 100 * (100 + (product.taxRate || 0)) / 100 + (product.shippingCharges !== undefined ? product.shippingCharges : 50)).toFixed(2)}</div>
               </div>
             </div>
           </div>
