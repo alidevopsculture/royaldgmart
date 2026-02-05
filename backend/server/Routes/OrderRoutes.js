@@ -105,8 +105,12 @@ router.post('/create', auth, upload.single('paymentScreenshot'), async (req, res
 
     // Calculate totals using valid products
     const subtotal = validProducts.reduce((total, item) => total + item.totalPrice, 0);
-    const shipping = 50;
-    const tax = subtotal * 0.18;
+    
+    // Get shipping and tax from first product, use 0 if not set
+    const firstProduct = validProducts[0]?.product;
+    const shipping = firstProduct?.shippingCharges !== undefined ? firstProduct.shippingCharges : 50;
+    const taxRate = firstProduct?.taxRate !== undefined ? firstProduct.taxRate : 18;
+    const tax = (subtotal * taxRate) / 100;
     const total = subtotal + shipping + tax;
 
     // Create order

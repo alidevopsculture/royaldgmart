@@ -411,7 +411,9 @@ export default function Checkout() {
             const verificationResult = await verifyRazorpayPaymentClient(response, orderResult.orderId);
             if (verificationResult && verificationResult.success) {
               toast.success('Payment successful!');
-              router.push(`/order-confirmation?orderId=${orderResult.orderId}&total=${total.toFixed(2)}`);
+              // Use the total from backend response instead of frontend calculation
+              const backendTotal = orderResult.total || total;
+              router.push(`/order-confirmation?orderId=${orderResult.orderId}&total=${backendTotal.toFixed(2)}`);
             } else {
               throw new Error('Payment verification failed');
             }
@@ -484,7 +486,9 @@ export default function Checkout() {
                     clearInterval(pollInterval);
                     razorpay.close();
                     toast.success('Payment successful!');
-                    router.push(`/order-confirmation?orderId=${orderResult.orderId}&total=${total.toFixed(2)}`);
+                    // Use the total from backend response
+                    const backendTotal = orderResult.total || total;
+                    router.push(`/order-confirmation?orderId=${orderResult.orderId}&total=${backendTotal.toFixed(2)}`);
                   }
                 }
               } catch (error) {
@@ -538,7 +542,9 @@ export default function Checkout() {
       
       if (result && result.orderId) {
         toast.success('Order placed successfully!');
-        router.push(`/order-confirmation?orderId=${result.orderId}&total=${total.toFixed(2)}`);
+        // Use the total from backend response instead of frontend calculation
+        const backendTotal = result.total || total;
+        router.push(`/order-confirmation?orderId=${result.orderId}&total=${backendTotal.toFixed(2)}`);
       } else {
         throw new Error('Invalid response from server');
       }
@@ -865,11 +871,15 @@ export default function Checkout() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
-                    <span>₹{(subtotal + tax).toFixed(2)}</span>
+                    <span>₹{subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Shipping</span>
                     <span>{shipping === 0 ? 'Free Shipping' : `₹${shipping.toFixed(2)}`}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Tax (18%)</span>
+                    <span>₹{tax.toFixed(2)}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between text-lg font-bold">

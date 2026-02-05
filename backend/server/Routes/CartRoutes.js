@@ -183,9 +183,17 @@ router.put('/:userId/update', async (req, res) => {
     }
 
     // Update item
-    if (quantity !== undefined) cart.products[itemIndex].quantity = quantity;
+    if (quantity !== undefined) {
+      cart.products[itemIndex].quantity = quantity;
+      // Recalculate totalPrice when quantity changes
+      cart.products[itemIndex].totalPrice = cart.products[itemIndex].purchasePrice * quantity;
+    }
     if (size !== undefined) cart.products[itemIndex].size = size;
-    if (purchasePrice !== undefined) cart.products[itemIndex].purchasePrice = purchasePrice;
+    if (purchasePrice !== undefined) {
+      cart.products[itemIndex].purchasePrice = purchasePrice;
+      // Recalculate totalPrice when purchasePrice changes
+      cart.products[itemIndex].totalPrice = purchasePrice * cart.products[itemIndex].quantity;
+    }
     if (totalPrice !== undefined) cart.products[itemIndex].totalPrice = totalPrice;
 
     cart.updatedAt = Date.now();

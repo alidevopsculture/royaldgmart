@@ -309,7 +309,7 @@ export default function CartPage() {
                           </div>
                         </div>
                         
-                        <p className="text-base sm:text-lg font-bold mt-2">Total: ₹{(item.purchasePrice * item.quantity).toFixed(2)}</p>
+                        <p className="text-base sm:text-lg font-bold mt-2">Total: ₹{item.totalPrice.toFixed(2)}</p>
                       </div>
                       
                       <div className="flex-shrink-0 w-full sm:w-auto">
