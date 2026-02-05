@@ -103,10 +103,7 @@ export function Createproduct() {
     'WOMEN UNSTICHED SUITS',
     'LEHNGAS',
     'WOMENS OTHERS',
-    'BED SHEETS',
-    'CURTAINS',
-    'BLANKETS',
-    'MOSQUITO NETS',
+    'HOUSEHOLD',
     'WHOLESALE'
   ];
   

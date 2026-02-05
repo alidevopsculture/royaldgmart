@@ -7,8 +7,8 @@ const productDataGet=z.object({
             name: z.string().min(3),
             description: z.string().min(5),
             price: z.number(),
-            category: z.enum(['Sarees', 'Lehenga', 'Suite', 'Gowns', 'Laungery & Garments', 'Thaan kapda', 'Froks']),
-            subCategory: z.string(),
+            category: z.string(),
+            subCategory: z.string().optional(),
             images: z.array(z.string()),
             stockQuantity: z.number().min(0),
             availableSizesColors: z.array(
@@ -89,8 +89,8 @@ const individualProduct= z.object({
     name: z.string().min(3),
     description: z.string().min(5),
     price: z.number(),
-    category: z.enum(['Sarees', 'Lehenga', 'Suite', 'Gowns', 'Laungery & Garments', 'Thaan kapda', 'Froks']),
-    subCategory: z.string(),
+    category: z.string(),
+    subCategory: z.string().optional(),
     images: z.array(z.string()),
     stockQuantity: z.number().min(0),
     availableSizesColors: z.array(

@@ -185,10 +185,10 @@ export default async function Homepage({ user }: { user: any }) {
               />
               <CategoryCard
                 img="/banners/banner04.png"
-                title="Lehengas"
-                subtitle="Beautiful lehengas for women"
+                title="Household Items"
+                subtitle="Bed sheets, curtains & more"
                 buttonText="Explore"
-                href="/lehngas"
+                href="/household"
               />
             </div>
           </div>
@@ -490,10 +490,10 @@ export default async function Homepage({ user }: { user: any }) {
               <h3 className="font-light text-lg mb-6 text-white">Collections</h3>
               <ul className="space-y-3">
                 <li><Link href="/saree" className="text-gray-300 hover:text-white transition-colors font-light">Sarees</Link></li>
-                <li><Link href="/lehenga" className="text-gray-300 hover:text-white transition-colors font-light">Lehengas</Link></li>
-                <li><Link href="/men" className="text-gray-300 hover:text-white transition-colors font-light">Men's Collection</Link></li>
-                <li><Link href="/women" className="text-gray-300 hover:text-white transition-colors font-light">Women's Suits</Link></li>
-                <li><Link href="/new" className="text-gray-300 hover:text-white transition-colors font-light">New Arrivals</Link></li>
+                <li><Link href="/lehngas" className="text-gray-300 hover:text-white transition-colors font-light">Lehengas</Link></li>
+                <li><Link href="/men-suiting-shirting" className="text-gray-300 hover:text-white transition-colors font-light">Men's Collection</Link></li>
+                <li><Link href="/women-unstiched-suits" className="text-gray-300 hover:text-white transition-colors font-light">Women's Suits</Link></li>
+                <li><Link href="/household" className="text-gray-300 hover:text-white transition-colors font-light">Household Items</Link></li>
               </ul>
             </div>
 

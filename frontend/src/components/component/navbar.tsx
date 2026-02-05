@@ -120,8 +120,7 @@ export default function Navbar() {
   // Bottom scrollable navigation categories
   const navCategories = [
     "WHOLESALE","SAREE","MEN SUITING SHIRTING","MEN COMBOS PACKS","WOMEN STICHED SUITS",
-    "WOMEN UNSTICHED SUITS", "LEHNGAS", "WOMENS OTHERS", "BED SHEETS",
-    "CURTAINS", "BLANKETS" , "MOSQUITO NETS"
+    "WOMEN UNSTICHED SUITS", "LEHNGAS", "WOMENS OTHERS", "HOUSEHOLD"
   ];
 
   const renderCategoryLink = (category: string) => {
@@ -157,6 +156,15 @@ export default function Navbar() {
       return (
         <Link key={category} href="/wholesale" prefetch={false}
           className="mx-1 px-3 py-1 rounded-lg bg-orange-600 text-white font-bold"
+        >
+          {category}
+        </Link>
+      );
+    }
+    if (category === "HOUSEHOLD") {
+      return (
+        <Link key={category} href="/household" prefetch={false}
+          className="mx-1 px-3 py-1 rounded-md hover:bg-gray-100 text-gray-800 font-semibold text-sm transition"
         >
           {category}
         </Link>
