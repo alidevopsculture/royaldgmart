@@ -7,6 +7,25 @@ import { Button } from '@/components/ui/button'
 import { CheckCircle, Package, Truck, Home } from 'lucide-react'
 import Link from 'next/link'
 
+const clearCart = async () => {
+  try {
+    const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cart/clear`, {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    if (response.ok) {
+      window.dispatchEvent(new Event('cartUpdated'));
+    }
+  } catch (error) {
+    console.error('Failed to clear cart:', error);
+  }
+};
+
 export default function OrderConfirmation() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -83,18 +102,27 @@ export default function OrderConfirmation() {
           </div>
 
           <div className="space-y-3">
-            <Link href={`/shipping?orderId=${orderId}`} className="block">
-              <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                Track Your Order
-              </Button>
-            </Link>
+            <Button 
+              className="w-full bg-blue-600 hover:bg-blue-700"
+              onClick={async () => {
+                await clearCart();
+                router.push(`/shipping?orderId=${orderId}`);
+              }}
+            >
+              Track Your Order
+            </Button>
             
-            <Link href="/" className="block">
-              <Button variant="outline" className="w-full">
-                <Home className="w-4 h-4 mr-2" />
-                Continue Shopping
-              </Button>
-            </Link>
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={async () => {
+                await clearCart();
+                router.push('/');
+              }}
+            >
+              <Home className="w-4 h-4 mr-2" />
+              Continue Shopping
+            </Button>
           </div>
         </CardContent>
       </Card>

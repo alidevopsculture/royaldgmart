@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Cart = require('../Models/CartSchema');
 const Product = require('../Models/ProductSchema');
+const { authenticateToken: auth } = require('../MiddleWare/auth');
 
 // Get cart by user ID
 router.get('/:userId', async (req, res) => {
@@ -300,6 +301,24 @@ router.delete('/:userId/clear', async (req, res) => {
   } catch (error) {
     console.error('Error clearing cart:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Clear cart (authenticated users)
+router.delete('/clear', auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    await Cart.findOneAndUpdate(
+      { user: userId },
+      { $set: { products: [] } },
+      { upsert: true }
+    );
+    
+    res.json({ success: true, message: 'Cart cleared successfully' });
+  } catch (error) {
+    console.error('Error clearing cart:', error);
+    res.status(500).json({ message: 'Failed to clear cart' });
   }
 });
 
