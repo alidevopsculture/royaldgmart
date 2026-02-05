@@ -89,4 +89,4 @@ jobs:
             -e NEXT_PUBLIC_RAZORPAY_KEY_ID="${{ secrets.NEXT_PUBLIC_RAZORPAY_KEY_ID }}" \
             ${{ secrets.DOCKER_USERNAME }}/rdgm-frontend:latest
           
-          echo "Deployment successful"
+          echo "Deployment successful, thanks"
