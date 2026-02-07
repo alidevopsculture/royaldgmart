@@ -10,14 +10,28 @@ import Link from 'next/link'
 const clearCart = async () => {
   try {
     const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cart/clear`, {
+    const sessionId = localStorage.getItem('guestSessionId');
+    
+    let url: string;
+    if (token) {
+      // For authenticated users
+      url = `${process.env.NEXT_PUBLIC_API_URL}/api/cart/clear`;
+    } else if (sessionId) {
+      // For guest users
+      url = `${process.env.NEXT_PUBLIC_API_URL}/api/guest-cart/${sessionId}/clear`;
+    } else {
+      return; // No cart to clear
+    }
+    
+    const response = await fetch(url, {
       method: 'DELETE',
       credentials: 'include',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        ...(token && { 'Authorization': `Bearer ${token}` }),
         'Content-Type': 'application/json'
       }
     });
+    
     if (response.ok) {
       window.dispatchEvent(new Event('cartUpdated'));
     }
@@ -35,7 +49,11 @@ export default function OrderConfirmation() {
   useEffect(() => {
     if (!orderId) {
       router.push('/')
+      return
     }
+    
+    // Clear cart immediately when order confirmation loads
+    clearCart()
   }, [orderId, router])
 
   return (
@@ -104,10 +122,7 @@ export default function OrderConfirmation() {
           <div className="space-y-3">
             <Button 
               className="w-full bg-blue-600 hover:bg-blue-700"
-              onClick={async () => {
-                await clearCart();
-                router.push(`/shipping?orderId=${orderId}`);
-              }}
+              onClick={() => router.push(`/shipping?orderId=${orderId}`)}
             >
               Track Your Order
             </Button>
@@ -115,10 +130,7 @@ export default function OrderConfirmation() {
             <Button 
               variant="outline" 
               className="w-full"
-              onClick={async () => {
-                await clearCart();
-                router.push('/');
-              }}
+              onClick={() => router.push('/')}
             >
               <Home className="w-4 h-4 mr-2" />
               Continue Shopping
