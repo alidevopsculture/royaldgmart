@@ -24,17 +24,19 @@ export function ProductViewClient({ product, productId, user }: ProductViewClien
   const [quantity, setQuantity] = useState<number>(1)
   const [isAddingToCart, setIsAddingToCart] = useState(false)
   
-  // Get available colors for selected size
+  // Get available colors for selected size or all colors if no size selected
   const availableColors = selectedSize 
     ? product.availableSizesColors.find(item => item.size === selectedSize)?.colors || []
-    : []
+    : product.availableSizesColors.length > 0 
+      ? product.availableSizesColors[0].colors || []
+      : []
 
   const handleAddToCart = async () => {
     if (!selectedSize) {
       toast.error("Please select a size")
       return
     }
-    if (!selectedColor && availableColors.length > 0) {
+    if (availableColors.length > 0 && !selectedColor) {
       toast.error("Please select a color")
       return
     }
@@ -92,7 +94,11 @@ export function ProductViewClient({ product, productId, user }: ProductViewClien
           className="flex items-center gap-2"
           onValueChange={(value) => {
             setSelectedSize(value)
-            setSelectedColor(null) // Reset color when size changes
+            // Only reset color if the currently selected color is not available in the new size
+            const newSizeColors = product.availableSizesColors.find(item => item.size === value)?.colors || []
+            if (selectedColor && !newSizeColors.some(c => c.color === selectedColor)) {
+              setSelectedColor(null)
+            }
           }}
         >
           {product.availableSizesColors.map((item, index) => (
