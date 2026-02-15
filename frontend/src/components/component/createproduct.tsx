@@ -62,7 +62,8 @@ export type OtherDataType={
   }
   productDiscount:number,
   taxPercentage:number,
-  shippingCharges:number
+  shippingCharges:number,
+  soldOut:boolean
 }
 
 interface ColorOption {
@@ -87,6 +88,7 @@ export function Createproduct() {
     productDiscount: 0, // Initialize with 0
     taxPercentage: 0, // Default 0 - optional
     shippingCharges: 50, // Default shipping charges
+    soldOut: false, // Default to false
     product_specification: {
       material: '',
       careInstruction: '',
@@ -149,6 +151,7 @@ export function Createproduct() {
             carousel: otherData.carousel || false,
             most_selling_product: otherData.most_selling_product || false,
             isNew: otherData.isNew || false,
+            soldOut: otherData.soldOut || false,
             taxRate: otherData.taxPercentage,
             shippingCharges: otherData.shippingCharges,
           };
@@ -267,6 +270,14 @@ export function Createproduct() {
                   onCheckedChange={(checked) => setOtherData({...otherData, isNew: !!checked})}
                 />
                 <Label htmlFor="newBadge">Show NEW badge on product card</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="soldOut"
+                  checked={otherData.soldOut}
+                  onCheckedChange={(checked) => setOtherData({...otherData, soldOut: !!checked})}
+                />
+                <Label htmlFor="soldOut">Mark as Sold Out</Label>
               </div>
             </div>
           </div>

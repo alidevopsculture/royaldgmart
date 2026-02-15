@@ -30,6 +30,7 @@ const productDataGet=z.object({
             carousel: z.boolean(), // New field
             most_selling_product: z.boolean(),
             isNew: z.boolean().optional(),
+            soldOut: z.boolean().optional(),
             createdAt: z.date(),
             updatedAt: z.date(),
             product_specification: z.object({
@@ -74,6 +75,8 @@ const productDataPost=z.object({
 
     isNew: z.boolean().optional(),
 
+    soldOut: z.boolean().optional(),
+
     product_specification: z.object({
         material: z.string(),
         careInstruction: z.string(),
@@ -112,6 +115,7 @@ const individualProduct= z.object({
     carousel: z.boolean(), // New field
     most_selling_product: z.boolean(),
     isNew: z.boolean().optional(),
+    soldOut: z.boolean().optional(),
     createdAt: z.date(),
     updatedAt: z.date(),
     product_specification: z.object({

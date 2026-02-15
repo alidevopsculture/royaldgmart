@@ -33,6 +33,7 @@ type Product = {
   carousel: boolean
   most_selling_product: boolean
   isNew: boolean
+  soldOut: boolean
   taxRate: number
   shippingCharges: number
   product_specification: {
@@ -313,6 +314,14 @@ export default function EditProduct() {
                   onCheckedChange={(checked) => setProduct({...product, isNew: !!checked})}
                 />
                 <Label htmlFor="newBadge">Show NEW badge on product card</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="soldOut"
+                  checked={product.soldOut || false}
+                  onCheckedChange={(checked) => setProduct({...product, soldOut: !!checked})}
+                />
+                <Label htmlFor="soldOut">Mark as Sold Out</Label>
               </div>
             </div>
           </div>

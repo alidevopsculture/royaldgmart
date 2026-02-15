@@ -89,6 +89,10 @@ const productSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  soldOut: {
+    type: Boolean,
+    default: false
+  },
   slug: {
     type: String,
     unique: true,

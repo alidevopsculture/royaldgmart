@@ -35,7 +35,7 @@ export default function ProductCard({ product }: { product: any }) {
   }
 
   return (
-    <div className="w-full bg-white overflow-hidden cursor-pointer"
+    <div className={`w-full bg-white overflow-hidden cursor-pointer ${product.soldOut ? 'opacity-60' : ''}`}
          onClick={handleCardClick}
          onMouseEnter={() => {
            if (productImages.length > 1) {
@@ -55,14 +55,15 @@ export default function ProductCard({ product }: { product: any }) {
         
         {/* Cart Icon */}
         <button
-          className="absolute top-3 right-3 z-10 text-white w-8 h-8 rounded-full flex items-center justify-center transition-colors touch-manipulation"
-          style={{ backgroundColor: 'rgba(241, 100, 34, 1)' }}
+          className={`absolute top-3 right-3 z-10 text-white w-8 h-8 rounded-full flex items-center justify-center transition-colors touch-manipulation ${
+            product.soldOut ? 'bg-gray-400 cursor-not-allowed' : 'bg-orange-600'
+          }`}
           onTouchStart={(e) => e.stopPropagation()}
           onClick={async (e) => {
             e.preventDefault();
             e.stopPropagation();
             
-            if (isAddingToCart) return;
+            if (isAddingToCart || product.soldOut) return;
             
             setIsAddingToCart(true);
             
@@ -102,7 +103,7 @@ export default function ProductCard({ product }: { product: any }) {
               setIsAddingToCart(false);
             }
           }}
-          disabled={isAddingToCart}
+          disabled={isAddingToCart || product.soldOut}
         >
           <ShoppingCart className="w-4 h-4" />
         </button>
@@ -111,6 +112,13 @@ export default function ProductCard({ product }: { product: any }) {
         {product.isNew && (
           <div className="absolute top-12 left-3 z-10 bg-black text-white px-2 py-1 rounded text-xs font-bold">
             NEW
+          </div>
+        )}
+        
+        {/* SOLD OUT Badge */}
+        {product.soldOut && (
+          <div className="absolute top-20 left-3 z-10 bg-gray-800 text-white px-2 py-1 rounded text-xs font-bold">
+            SOLD OUT
           </div>
         )}
         
@@ -163,11 +171,18 @@ export default function ProductCard({ product }: { product: any }) {
         
         {/* BUY NOW BUTTON */}
         <Button
-          className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold touch-manipulation" 
+          className={`w-full font-semibold touch-manipulation ${
+            product.soldOut 
+              ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
+              : 'bg-orange-600 hover:bg-orange-700 text-white'
+          }`}
+          disabled={product.soldOut}
           onTouchStart={(e) => e.stopPropagation()}
           onClick={async (e) => {
             e.preventDefault();
             e.stopPropagation();
+            
+            if (product.soldOut) return;
             
             try {
               const { getUserData } = await import('@/actions/auth');
@@ -208,7 +223,7 @@ export default function ProductCard({ product }: { product: any }) {
             }
           }}
         >
-          Buy Now
+          {product.soldOut ? 'Sold Out' : 'Buy Now'}
         </Button>
       </div>
     </div>

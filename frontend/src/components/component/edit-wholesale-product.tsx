@@ -238,14 +238,14 @@ export default function EditWholesaleProduct({ productId }: { productId: string 
             <Label>Marketing</Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="grid grid-cols-2 items-center gap-2">
-                <Label>Add product to carousel</Label>
+                {/* <Label>Add product to carousel</Label> */}
                 <Checkbox 
                   checked={product.carousel}
                   onCheckedChange={(checked) => setProduct({...product, carousel: !!checked})}
                 />
               </div>
               <div className="grid grid-cols-2 items-center gap-2">
-                <Label>Is this a best selling product</Label>
+                {/* <Label>Is this a best selling product</Label> */}
                 <Checkbox 
                   checked={product.most_selling_product}
                   onCheckedChange={(checked) => setProduct({...product, most_selling_product: !!checked})}
