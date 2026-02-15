@@ -75,9 +75,20 @@ export async function Productview({productId, category}: ProductviewProps) {
 
             {/* Description */}
             <div className="prose prose-gray max-w-none">
-              <p className="text-gray-700 leading-relaxed text-sm sm:text-base lg:text-lg">
-                {product.description}
-              </p>
+              <div className="text-gray-700 leading-relaxed text-sm sm:text-base lg:text-lg space-y-2">
+                {product.description.split('\n').map((line, index) => {
+                  const trimmedLine = line.trim()
+                  if (trimmedLine.startsWith('•') || trimmedLine.startsWith('-') || trimmedLine.startsWith('*')) {
+                    return (
+                      <div key={index} className="flex items-start gap-2">
+                        <span className="text-gray-500 mt-1">•</span>
+                        <span>{trimmedLine.substring(1).trim()}</span>
+                      </div>
+                    )
+                  }
+                  return trimmedLine ? <p key={index}>{trimmedLine}</p> : null
+                })}
+              </div>
             </div>
 
             {/* Product Actions - Mobile Optimized */}
